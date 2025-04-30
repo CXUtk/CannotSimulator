@@ -34,10 +34,10 @@ class Battlefield:
     def setup_battle(self, left_army, right_army, monster_data):
         """二维战场初始化"""
         # 左阵营生成在左上区域
-        for monster in left_army:
-            name = monster["name"]
-            count = monster["count"]
-            data = next(m for m in monster_data if m["名字"] == name)
+        for (name, count) in left_army.items():
+            data = next((m for m in monster_data if m["名字"] == name), None)
+            if data is None:
+                return False
             for _ in range(count):
                 pos = np.array([
                     random.uniform(0, SPAWN_AREA),
@@ -48,10 +48,10 @@ class Battlefield:
                 )
         
         # 右阵营生成在右下区域
-        for monster in right_army:
-            name = monster["name"]
-            count = monster["count"]
-            data = next(m for m in monster_data if m["名字"] == name)
+        for (name, count) in right_army.items():
+            data = next((m for m in monster_data if m["名字"] == name), None)
+            if data is None:
+                return False
             for _ in range(count):
                 pos = np.array([
                     random.uniform(MAP_SIZE[0]-SPAWN_AREA, MAP_SIZE[0]),
@@ -60,6 +60,8 @@ class Battlefield:
                 self.append_monster(
                     MonsterFactory.create_monster(data, Faction.RIGHT, pos, self)
                 )
+        
+        return True
 
     def get_enemies(self, faction):
         """获取指定阵营的所有敌人"""
@@ -75,6 +77,8 @@ class Battlefield:
         
         if len(alive_factions) == 1:
             return list(alive_factions)[0]
+        elif len(alive_factions) == 0:
+            return Faction.LEFT
         return None
 
     def run_battle(self, visualize=False):
@@ -99,8 +103,6 @@ class Battlefield:
                 print(f"左边存活{left} / 右边存活{len(self.monsters) - left}")
                 return winner
             
-
-            
             self.gameTime += VIRTUAL_TIME_DELTA
 
     def print_battlefield(self):
@@ -113,6 +115,8 @@ class Battlefield:
                 symbol = 'L' if m.faction == Faction.LEFT else 'R'
                 if grid[y, x] != '.' and symbol != grid[y, x]:
                     symbol = 'X'
+                if m.char_icon != "":
+                    symbol = m.char_icon
                 grid[y, x] = symbol
         
         print(f"\nRound {self.round}")
