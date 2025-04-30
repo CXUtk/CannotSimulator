@@ -12,22 +12,31 @@ class Faction(Enum):
     RIGHT = 1
 
 # 场景参数
-MAP_SIZE = np.array([20, 10])  # 场景宽度（单位：格）
+MAP_SIZE = np.array([13, 9])  # 场景宽度（单位：格）
 SPAWN_AREA = 3  # 阵营出生区域宽度
 
 VIRTUAL_TIME_STEP = 60 # 60帧相当于一秒
 VIRTUAL_TIME_DELTA = 1.0 / VIRTUAL_TIME_STEP
 
 class Battlefield:
-    def __init__(self):
+    def __init__(self, monster_data):
         self.monsters = []
         self.round = 0
         self.map_size = MAP_SIZE
+        self.monster_data = monster_data
 
 
     def append_monster(self, monster):
         """添加一个怪物到战场"""
         id = len(self.monsters)
+        monster.id = id
+        self.monsters.append(monster)
+    
+    def append_monster_name(self, name, pos):
+        """添加一个怪物到战场，只需要名字"""
+        data = next((m for m in self.monster_data if m["名字"] == name), None)
+        id = len(self.monsters)
+        monster = MonsterFactory.create_monster(data, Faction.LEFT, pos, self)
         monster.id = id
         self.monsters.append(monster)
 
@@ -39,10 +48,16 @@ class Battlefield:
             if data is None:
                 return False
             for _ in range(count):
-                pos = np.array([
-                    random.uniform(0, SPAWN_AREA),
-                    random.uniform(0, MAP_SIZE[1])
-                ])
+                if data["攻击范围"]["数值"] <= 0.8:
+                    pos = np.array([
+                        random.uniform(2, SPAWN_AREA + 2),
+                        random.uniform(0, MAP_SIZE[1])
+                    ])
+                else:
+                    pos = np.array([
+                        random.uniform(0, SPAWN_AREA - 2),
+                        random.uniform(0, MAP_SIZE[1])
+                    ])
                 self.append_monster(
                     MonsterFactory.create_monster(data, Faction.LEFT, pos, self)
                 )
@@ -53,10 +68,16 @@ class Battlefield:
             if data is None:
                 return False
             for _ in range(count):
-                pos = np.array([
-                    random.uniform(MAP_SIZE[0]-SPAWN_AREA, MAP_SIZE[0]),
-                    random.uniform(0, MAP_SIZE[1])
-                ])
+                if data["攻击范围"]["数值"] <= 0.8:
+                    pos = np.array([
+                        random.uniform(MAP_SIZE[0]-SPAWN_AREA-2, MAP_SIZE[0]-2),
+                        random.uniform(0, MAP_SIZE[1])
+                    ])
+                else:
+                    pos = np.array([
+                        random.uniform(MAP_SIZE[0]-SPAWN_AREA+2, MAP_SIZE[0]),
+                        random.uniform(0, MAP_SIZE[1])
+                    ])
                 self.append_monster(
                     MonsterFactory.create_monster(data, Faction.RIGHT, pos, self)
                 )
@@ -111,7 +132,8 @@ class Battlefield:
         
         for m in self.monsters:
             if m.is_alive:
-                x, y = int(m.position[0] * 2), int(m.position[1] * 2)
+                x = np.minimum(np.maximum(0, int(m.position[0] * 2)), MAP_SIZE[0]*2-1)
+                y = np.minimum(np.maximum(0, int(m.position[1] * 2)), MAP_SIZE[1]*2-1)
                 symbol = 'L' if m.faction == Faction.LEFT else 'R'
                 if grid[y, x] != '.' and symbol != grid[y, x]:
                     symbol = 'X'

@@ -4,10 +4,11 @@ import math
 import random
 import time
 from enum import Enum
+from typing import List
 import numpy as np
 
 
-DEBUG = True
+DEBUG = False
 
 def debug_print(msg):
     if DEBUG:
@@ -35,7 +36,7 @@ def calculate_normal_dmg(defense, magic_resist, dmg, magic=False):
     if not magic:
         return np.maximum(1, np.maximum(dmg - defense, int(dmg * 0.05)))
     elif magic:
-        return np.maximum(1, int(dmg * (1.0 - magic_resist / 100)))
+        return np.maximum(int(dmg * 0.05), int(dmg * (1.0 - magic_resist / 100)))
 
 class TargetSelector:
     @staticmethod
@@ -62,7 +63,7 @@ class TargetSelector:
                 enemy_info.append({
                     "enemy": enemy,
                     "distance": dist,
-                    "aggro": enemy.aggro
+                    "aggro": enemy.aggro if in_range else 0 
                 })
         
         # 按照优先级排序：嘲讽降序 -> 距离升序
@@ -240,17 +241,17 @@ class Monster:
         norm_direction = direction / np.linalg.norm(direction) if np.any(direction) else direction
         self.position += norm_direction * self.move_speed * delta_time
 
-        # RADIUS = 0.2
-        # # 碰撞检测
-        # for m in self.battlefield.monsters:
-        #     if not m.is_alive:
-        #         continue
-        #     dir = m.position - self.position
-        #     dist = np.linalg.norm(dir)
-        #     dir /= dist
-        #     if m != self and dist < RADIUS * 2:
-        #         # 发生碰撞，挤出
-        #         self.position -= dir * RADIUS
+        RADIUS = 0.2
+        # 碰撞检测
+        for m in self.battlefield.monsters:
+            if not m.is_alive or m == self:
+                continue
+            dir = m.position - self.position
+            dist = np.maximum(np.linalg.norm(dir), 0.0001)
+            dir /= dist
+            if m != self and dist < RADIUS * 2:
+                # 发生碰撞，挤出
+                self.position -= dir * RADIUS
         
         # 限制在场景范围内
         self.position = np.clip(self.position, [0, 0], self.battlefield.map_size)
@@ -298,6 +299,7 @@ class Monster:
             damage = self.calculate_damage(target, self.attack_power)
             self.on_attack(target, damage)
             if self.apply_damage_to_target(target, damage):
+                debug_print(f"{self.name}{self.id} 对 {target.name}{target.id} 造成{damage}点{self.attack_type}伤害")
                 target.on_hit(self, damage)
             self.attack_time_counter = 0
 
@@ -309,9 +311,11 @@ class Monster:
     def calculate_damage(self, target, damage):
         """计算伤害值"""
         if self.attack_type == "物理":
-            return np.maximum(damage - target.phy_def, int(damage * 0.05))
+            return calculate_normal_dmg(target.phy_def, 0, damage, False)
+            # return np.maximum(damage - target.phy_def, int(damage * 0.05))
         elif self.attack_type == "魔法":
-            return int(damage * (1.0 - target.magic_resist / 100))
+            return calculate_normal_dmg(target.phy_def, target.magic_resist, damage, True)
+            # return int(damage * (1.0 - target.magic_resist / 100))
         
     def take_damage(self, damage) -> bool:
         """承受伤害"""
@@ -366,6 +370,32 @@ class 污染躯壳(Monster):
         if self.speed_boost_counter > 0:
             self.speed_boost_counter -= delta_time
 
+class 大喷蛛(Monster):
+    """大喷蛛"""
+    def on_spawn(self):
+        self.skill_counter = 0
+
+    def increase_skill_cd(self, delta_time):
+        self.skill_counter += delta_time
+        if self.skill_counter >= 5:
+            self.skill_counter = 0
+            self.spawn_small()
+        super().increase_skill_cd(delta_time)
+    
+    def on_death(self):
+        self.spawn_small()
+        self.spawn_small()
+        self.spawn_small()
+        self.spawn_small()
+
+
+    def spawn_small(self):
+        debug_print(f"{self.name} 释放小喷蛛")
+        self.battlefield.append_monster_name("小喷蛛", self.position + np.array([
+                        random.uniform(0, 1) * 0.001,
+                        random.uniform(0, 1) * 0.001
+                    ]))
+        
 class 鳄鱼(Monster):
     """鳄鱼"""
     def on_attack(self, target, damage):
@@ -408,7 +438,7 @@ class 狂暴宿主组长(Monster):
 
     def extra_update(self, delta_time):
         if self.battlefield.gameTime - self.lastHurtTime >= 1.0:
-            self.health -= 300
+            self.health -= 500
             self.lastHurtTime = self.battlefield.gameTime
             if self.health <= 0:
                 self.is_alive = False
@@ -936,6 +966,116 @@ class 萨克斯(Monster):
             targets.append(smallest_right_target)
         # 返回最近的敌人列表
         return targets
+    
+class 大君之赐(Monster):
+    """大君之赐"""
+    def take_damage(self, damage) -> bool:
+        """承受伤害"""
+        if self.invincible:
+            return False
+        self.health -= int(damage * 0.1 + 0.5)
+        if self.health <= 0:
+            self.is_alive = False
+            self.on_death()
+        return True
+
+class 萨卡兹链术师(Monster):
+    """萨卡兹链术师"""
+
+    class AttackNode:
+        """攻击节点数据类"""
+        __slots__ = ['target', 'damage_multiplier']  # 优化内存使用
+        
+        def __init__(self, target, multiplier):
+            self.target = target
+            self.damage_multiplier = multiplier
+
+    def chain_attack(self, initial_target: Monster) -> list[AttackNode]:
+        """
+        执行连锁攻击
+        :param initial_target: 初始攻击目标
+        :param battlefield: 战场实例
+        :return: 攻击节点列表（包含目标和伤害倍率）
+        """
+        attack_chain = []
+        visited = set()  # 已攻击目标ID缓存
+        current_target = initial_target
+        current_multiplier = 1.0
+        
+        # 添加初始攻击
+        attack_chain.append(self.AttackNode(current_target, current_multiplier))
+        visited.add(id(current_target))
+
+        # 执行最多4次跳跃
+        for _ in range(4):
+            # 寻找下一个候选目标
+            candidates = self._find_candidates(
+                current_target.position,
+                [m for m in self.battlefield.monsters if m.is_alive and m.faction != self.faction],
+                visited
+            )
+            
+            if not candidates:
+                break  # 没有可跳跃目标
+            
+            # 选择最近的目标
+            next_target = min(candidates, key=lambda x: x[1])
+            current_target = next_target[0]
+            current_multiplier *= 0.85
+            
+            # 记录攻击节点
+            attack_chain.append(
+                self.AttackNode(current_target, current_multiplier)
+            )
+            visited.add(id(current_target))
+        
+        return attack_chain
+        
+
+    def _find_candidates(self, 
+                        origin: tuple, 
+                        enemies: List['Monster'], 
+                        visited: set) -> List[tuple]:
+        """
+        查找有效候选目标
+        :param origin: 当前攻击源点坐标 (x, y)
+        :param enemies: 可用敌人列表
+        :param visited: 已攻击目标ID集合
+        :return: 候选列表 (目标, 距离)
+        """
+        candidates = []
+        ox, oy = origin
+        
+        for enemy in enemies:
+            # 排除已攻击目标
+            if id(enemy) in visited:
+                continue
+            
+            # 计算欧氏距离
+            dx = enemy.position[0] - ox
+            dy = enemy.position[1] - oy
+            distance = math.hypot(dx, dy)
+            
+            if distance <= 1.6:
+                candidates.append( (enemy, distance) )
+        
+        return candidates
+
+    def attack(self, target, gameTime):
+        for node in self.chain_attack(target):
+            dmg = self.calculate_damage(node.target, int(self.attack_power * node.damage_multiplier))
+            if self.apply_damage_to_target(node.target, dmg):
+                target.on_hit(self, dmg)
+                debug_print(f"{node.target.name} 受到{dmg}点魔法伤害")
+        self.attack_time_counter = 0
+
+    def on_death(self):
+        debug_print(f"{self.name} 变成大君之赐")
+        self.battlefield.append_monster_name("大君之赐", self.position + np.array([
+                        random.uniform(0, 1) * 0.001,
+                        random.uniform(0, 1) * 0.001
+                    ]))
+        
 
 class MonsterFactory:
     _monster_classes = {
@@ -959,7 +1099,11 @@ class MonsterFactory:
         "杰斯顿": 杰斯顿,
         "镜神": 镜神,
         "Vvan": Vvan,
-        "萨克斯": 萨克斯
+        "萨克斯": 萨克斯,
+        "大喷蛛": 大喷蛛,
+        "萨卡兹链术师":萨卡兹链术师,
+        "大君之赐": 大君之赐
+
         # 添加更多映射...
     }
     

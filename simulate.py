@@ -24,7 +24,7 @@ MONSTER_MAPPING = {
     10: "保鲜膜",
     11: "拳击囚犯",
     12: "阿咬",
-    13: "虫母",
+    13: "大喷蛛",
     14: "船长",
     15: "Vvan",
     16: "冰原术师",
@@ -96,21 +96,20 @@ def main():
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-
-        scene_config = {"left": {"冰原术师": 13, "拳击囚犯": 12}, "right": {"镜神": 8, "污染躯壳": 12}, "result": "left"}
+        #scene_config = {"left": {"1750哥": 5, "矿脉守卫": 6}, "right": {"高能源石虫": 22, "绵羊": 12}, "result": "right"}
 
         # 用户配置
         left_army = scene_config["left"]
         right_army = scene_config["right"]
     
         # 初始化战场
-        battlefield = Battlefield()
+        battlefield = Battlefield(monster_data)
         if not battlefield.setup_battle(left_army, right_army, monster_data):
             continue
         
         left_win = False
         # 开始战斗
-        if battlefield.run_battle(visualize=True) == Faction.LEFT:
+        if battlefield.run_battle(visualize=False) == Faction.LEFT:
             left_win = True
         
         if (left_win and scene_config["result"] == "left") or (not left_win and scene_config["result"] == "right"):
@@ -123,8 +122,7 @@ def main():
 
         matches += 1
         print(f"当前胜率：{win} / {matches}")
-        break
-        
+        #break
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
     # profiler.enable()
