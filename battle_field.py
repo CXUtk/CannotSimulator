@@ -15,6 +15,66 @@ SPAWN_AREA = 2  # 阵营出生区域宽度
 VIRTUAL_TIME_STEP = 60 # 60帧相当于一秒
 VIRTUAL_TIME_DELTA = 1.0 / VIRTUAL_TIME_STEP
 
+
+from collections import defaultdict
+
+class SpatialHash:
+    def __init__(self, cell_size=0.2):
+        self.cell_size = cell_size
+        self.grid = defaultdict(set)  # 使用集合避免重复
+        self.position_map = {}  # 记录每个对象的当前位置键
+
+    def _pos_to_key(self, position: tuple) -> tuple:
+        """将坐标转换为网格键"""
+        x, y = position
+        return (
+            int(math.floor(x / self.cell_size)),
+            int(math.floor(y / self.cell_size))
+        )
+
+    def insert(self, obj_id: int, position: tuple):
+        """插入或更新对象位置"""
+        new_key = self._pos_to_key(position)
+        
+        # 如果位置未变化，直接返回
+        if obj_id in self.position_map and self.position_map[obj_id] == new_key:
+            return
+        
+        # 移除旧位置的记录
+        if obj_id in self.position_map:
+            old_key = self.position_map[obj_id]
+            self.grid[old_key].discard(obj_id)
+            if not self.grid[old_key]:  # 清理空单元格
+                del self.grid[old_key]
+        
+        # 更新到新位置
+        self.position_map[obj_id] = new_key
+        self.grid[new_key].add(obj_id)
+
+    def query_neighbors(self, position: tuple, radius: float) -> set:
+        """查询指定半径内的邻居"""
+        center_x, center_y = position
+        search_radius = math.ceil(radius / self.cell_size)
+        neighbors = set()
+        
+        # 生成需要检测的网格范围
+        min_i = int((center_x - radius) / self.cell_size)
+        max_i = int((center_x + radius) / self.cell_size)
+        min_j = int((center_y - radius) / self.cell_size)
+        max_j = int((center_y + radius) / self.cell_size)
+        
+        # 遍历所有可能包含邻居的网格
+        for i in range(min_i, max_i + 1):
+            for j in range(min_j, max_j + 1):
+                neighbors.update(self.grid.get((i, j), set()))
+                
+        return neighbors
+
+    def batch_update(self, updates: dict):
+        """批量更新对象位置"""
+        for obj_id, pos in updates.items():
+            self.insert(obj_id, pos)
+
 class Battlefield:
     def __init__(self, monster_data):
         self.monsters = []

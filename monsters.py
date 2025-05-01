@@ -250,22 +250,23 @@ class Monster:
         norm_direction = direction / np.linalg.norm(direction) if np.any(direction) else direction
         self.position += norm_direction * self.move_speed * delta_time
 
-        # RADIUS = 0.2
-        # # 碰撞检测
-        # for m in self.battlefield.monsters:
-        #     if not m.is_alive or m == self:
-        #         continue
-        #     dir = m.position - self.position
-        #     dist = np.maximum(np.linalg.norm(dir), 0.0001)
-        #     dir /= dist
-        #     if m != self and dist < RADIUS * 2:
-        #         # 发生碰撞，挤出
-        #         self.position -= dir * RADIUS
+        RADIUS = 0.03
+        # 碰撞检测
+        for m in self.battlefield.monsters:
+            if not m.is_alive or m == self:
+                continue
+            dir = m.position - self.position
+            dist = np.maximum(np.linalg.norm(dir), 0.0001)
+            dir /= dist
+            depth = RADIUS * 2 - dist
+            if m != self and dist < RADIUS * 2:
+                # 发生碰撞，挤出
+                self.position -= dir * depth
         
         # 限制在场景范围内
         self.position = np.clip(self.position, [0, 0], self.battlefield.map_size)
 
-    def can_attack(self, gameTime):
+    def can_attack(self, delta_time):
         return self.attack_time_counter >= self.attack_interval
     
     def update_elemental(self, delta_time):
@@ -297,8 +298,8 @@ class Monster:
         # 优先攻击已有目标
         self.target = self.find_target()
         if self.target and self.target.is_alive:
-            if self.can_attack(self.battlefield.gameTime):
-                self.attack(self.target, self.battlefield.gameTime)
+            if self.can_attack(delta_time):
+                self.attack(self.target, delta_time)
 
     def find_target(self):
         """寻找最近的可攻击目标"""
@@ -369,6 +370,27 @@ class HighEnergySlug(Monster):
                 if distance <= explosion_radius:
                     dmg = self.calculate_damage(m, self.get_attack_power() * 4)
                     m.take_damage(dmg)
+                    debug_print(f"{m.name} 受到{dmg}点爆炸伤害")
+
+class 冰爆虫(Monster):
+    """冰爆虫"""
+    def on_death(self):
+        # 实现自爆逻辑
+        explosion_radius = 1.65
+        debug_print(f"{self.name} 即将自爆！")
+        for m in self.battlefield.monsters:
+            if m != self and m.faction != self.faction and m.is_alive:
+                distance = np.linalg.norm(m.position - self.position)
+                if distance <= explosion_radius:
+                    dmg = self.calculate_damage(m, self.get_attack_power() * 2)
+                    m.take_damage(dmg)
+                    # 施加10秒寒冷效果
+                    chill = BuffEffect(
+                        type=BuffType.CHILL,
+                        duration=10,
+                        source=self
+                    )
+                    m.status_system.apply(chill)
                     debug_print(f"{m.name} 受到{dmg}点爆炸伤害")
 
 class 污染躯壳(Monster):
@@ -1115,7 +1137,84 @@ class 萨卡兹链术师(Monster):
                         random.uniform(-1, 1) * 0.001,
                         random.uniform(-1, 1) * 0.001
                     ]))
+
+class 高普尼克(Monster):
+    """高普尼克"""
+    def on_extra_update(self, delta_time):
+        self.dizzy = False
+        self.frozen = False
+        return super().on_extra_update(delta_time)
+    
+class 狂躁珊瑚(Monster):
+    """狂躁珊瑚"""
+    def on_spawn(self):
+        self.attack_stack = 0
+        self.decay_timer = 0
+
+    def can_attack(self, delta_time):
+        ret = super().can_attack(delta_time)
+        direction = self.target.position - self.position
+        distance = np.linalg.norm(direction)
+
+        if distance <= self.attack_range:
+            self.decay_timer += delta_time
+            if self.decay_timer > 3.5 and (self.decay_timer - 3.5) % 1 < delta_time:
+                if self.attack_stack > 0:
+                    self.attack_stack -= 2
+                    self.attack_multiplier -= 0.3
+                else:
+                    self.attack_stack = 0
+                    self.attack_multiplier = 1
+        return ret
+
+
+    def attack(self, target, delta_time):
+        direction = target.position - self.position
+        distance = np.linalg.norm(direction)
+
+        if distance <= self.attack_range:
+            # 如果是近战
+            if distance <= 0.8:
+                damage = self.calculate_damage(target, self.get_attack_power() * 2)
+            else:
+                damage = self.calculate_damage(target, self.get_attack_power())
+            self.on_attack(target, damage)
+            if self.apply_damage_to_target(target, damage):
+                target.on_hit(self, damage)
+            self.attack_time_counter = 0
+            self.decay_timer = 0
+
+            if self.attack_stack < 15:
+                self.attack_stack += 1
+                self.attack_multiplier += 0.15
+            
+            if self.attack_stack == 10:
+                debug_print(f"{self.name} 被动叠了10层")
+            if self.attack_stack == 15:
+                debug_print(f"{self.name} 被动叠了15层")
+
+class 炮god(Monster):
+    """炮神"""
+    def attack(self, target, gameTime):
+        targets : list[Monster] = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
+        if len(targets) == 0:
+            return
         
+        for m in self.get_aoe_targets(targets[0]):
+            damage = self.calculate_damage(m, self.get_attack_power())
+            if self.apply_damage_to_target(m, damage):
+                m.on_hit(self, damage)
+                
+        self.attack_time_counter = 0
+        debug_print(f"{self.name}{self.id} 开炮")
+    
+    def get_aoe_targets(self, target):
+        aoe_targets = [m for m in self.battlefield.monsters 
+                if m.is_alive and m.faction != self.faction
+                and np.maximum(abs(m.position[0] - target.position[0]), abs(m.position[1] - target.position[1])) <= 1]
+        return aoe_targets
+
+
 
 class MonsterFactory:
     _monster_classes = {
@@ -1142,9 +1241,13 @@ class MonsterFactory:
         "萨克斯": 萨克斯,
         "大喷蛛": 大喷蛛,
         "萨卡兹链术师":萨卡兹链术师,
-        "大君之赐": 大君之赐
+        "大君之赐": 大君之赐,
+        "冰爆虫": 冰爆虫,
+        "高普尼克": 高普尼克,
+        "狂躁珊瑚": 狂躁珊瑚,
 
         # 添加更多映射...
+        "炮god": 炮god
     }
     
     @classmethod
