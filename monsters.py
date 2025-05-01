@@ -7,36 +7,25 @@ from enum import Enum
 from typing import List
 import numpy as np
 
+from elemental import ElementAccumulator, ElementType
+from utils import BuffEffect, BuffType, debug_print, Faction
 
-DEBUG = False
 
-def debug_print(msg):
-    if DEBUG:
-        print(msg)
-
-class BuffType(Enum):
-    CHILL = 0
-    FROZEN = 1
-    INVINCIBLE = 2
-    FIRE = 3
-    CORRUPT = 4
-    SPEEDUP = 5
-    DIZZY = 6
-
-@dataclass
-class BuffEffect:
-    type: BuffType
-    duration: float
-    source: 'Monster' = None
-    stacks: int = 1
-    data: dict = field(default_factory=dict)
 
 def calculate_normal_dmg(defense, magic_resist, dmg, magic=False):
     """计算伤害值"""
     if not magic:
-        return np.maximum(1, np.maximum(dmg - defense, int(dmg * 0.05)))
+        return np.maximum(1, np.maximum(dmg - defense, dmg * 0.05))
     elif magic:
-        return np.maximum(int(dmg * 0.05), int(dmg * (1.0 - magic_resist / 100)))
+        return np.maximum(dmg * 0.05, dmg * (1.0 - magic_resist / 100))
+    
+def manhatton_distance(pos1, pos2):
+    a_x = int(pos1[0])
+    a_y = int(pos1[1])
+
+    b_x = int(pos2[0])
+    b_y = int(pos2[1])
+    return abs(a_x - b_x) + abs(a_y - b_y)
 
 class TargetSelector:
     @staticmethod
@@ -82,6 +71,7 @@ class StatusSystem:
 
         self.fire_dmg_counter = 0
         self.corrupt_dmg_counter = 0
+        self.power_stay_counter = 0
         
     def apply(self, effect):
         # 处理效果叠加逻辑
@@ -139,6 +129,13 @@ class StatusSystem:
                 damage = calculate_normal_dmg(0, self.owner.magic_resist, 100, True)
                 self.owner.take_damage(damage)
 
+        power_stone = next((e for e in self.effects if e.type == BuffType.POWER_STONE), None)
+        if power_stone:
+            self.power_stay_counter += delta_time
+            if self.corrupt_dmg_counter % 1 < delta_time:
+                damage = 0.005 * self.owner.max_health * int(self.power_stay_counter)
+                self.owner.take_damage(damage)
+
     def _init_effect(self, effect):
         """初始化效果"""
         # 保存原始属性
@@ -154,6 +151,12 @@ class StatusSystem:
             self.owner.move_speed *= 4
         elif effect.type == BuffType.DIZZY:
             self.owner.dizzy = True
+        elif effect.type == BuffType.POWER_STONE:
+            self.owner.attack_speed += 50
+            self.owner.attack_multiplier *= 2
+            self.owner.move_speed *= 1.5
+            self.power_stay_counter = 0
+            debug_print(f"{self.owner.name}{self.owner.id} 进入了毒圈！")
 
     def remove(self, effect):
         # 恢复原始属性
@@ -167,6 +170,10 @@ class StatusSystem:
             self.owner.move_speed /= 4
         elif effect.type == BuffType.DIZZY:
             self.owner.dizzy = False
+        elif effect.type == BuffType.POWER_STONE:
+            self.owner.attack_speed -= 50
+            self.owner.attack_multiplier /= 2
+            self.owner.move_speed /= 1.5
 
 class Monster:
     def __init__(self, data, faction, position, battlefield):
@@ -198,6 +205,8 @@ class Monster:
         self.invincible = False
         self.battlefield = battlefield
         self.status_system = StatusSystem(self)
+        self.element_system = ElementAccumulator(self)
+        self.attack_multiplier = 1
 
     # 新增可扩展的虚方法
     def on_spawn(self):
@@ -217,7 +226,7 @@ class Monster:
         """攻击命中时触发的逻辑"""
         pass
 
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         """额外更新逻辑"""
         pass
 
@@ -241,30 +250,38 @@ class Monster:
         norm_direction = direction / np.linalg.norm(direction) if np.any(direction) else direction
         self.position += norm_direction * self.move_speed * delta_time
 
-        RADIUS = 0.2
-        # 碰撞检测
-        for m in self.battlefield.monsters:
-            if not m.is_alive or m == self:
-                continue
-            dir = m.position - self.position
-            dist = np.maximum(np.linalg.norm(dir), 0.0001)
-            dir /= dist
-            if m != self and dist < RADIUS * 2:
-                # 发生碰撞，挤出
-                self.position -= dir * RADIUS
+        # RADIUS = 0.2
+        # # 碰撞检测
+        # for m in self.battlefield.monsters:
+        #     if not m.is_alive or m == self:
+        #         continue
+        #     dir = m.position - self.position
+        #     dist = np.maximum(np.linalg.norm(dir), 0.0001)
+        #     dir /= dist
+        #     if m != self and dist < RADIUS * 2:
+        #         # 发生碰撞，挤出
+        #         self.position -= dir * RADIUS
         
         # 限制在场景范围内
         self.position = np.clip(self.position, [0, 0], self.battlefield.map_size)
 
     def can_attack(self, gameTime):
         return self.attack_time_counter >= self.attack_interval
+    
+    def update_elemental(self, delta_time):
+        if self.element_system.active_burst:
+            if self.element_system.active_burst.shouldClearBurst():
+                self.element_system.active_burst = None
+            else:
+                self.element_system.active_burst.update_effect(delta_time)
 
     def update(self, delta_time):
         if not self.is_alive:
             return
         
-        self.extra_update(delta_time)
+        self.on_extra_update(delta_time)
         self.status_system.update(delta_time)
+        self.update_elemental(delta_time)
 
         if self.target is None or not self.target.is_alive:
             # 寻找新目标
@@ -289,21 +306,24 @@ class Monster:
         if len(targets) > 0:
             return targets[0]
         return None
+    
+    def get_attack_power(self):
+        return self.attack_multiplier * self.attack_power
 
     # 攻击相关方法
     def attack(self, target, gameTime):
         direction = target.position - self.position
         distance = np.linalg.norm(direction)
-            
+
         if distance <= self.attack_range:
-            damage = self.calculate_damage(target, self.attack_power)
+            damage = self.calculate_damage(target, self.get_attack_power())
             self.on_attack(target, damage)
             if self.apply_damage_to_target(target, damage):
-                debug_print(f"{self.name}{self.id} 对 {target.name}{target.id} 造成{damage}点{self.attack_type}伤害")
                 target.on_hit(self, damage)
             self.attack_time_counter = 0
 
     def apply_damage_to_target(self, target, damage) -> bool:
+        debug_print(f"{self.name}{self.id} 对 {target.name}{target.id} 造成{damage}点{self.attack_type}伤害")
         if target.take_damage(damage):
             return True
         return False
@@ -329,10 +349,13 @@ class Monster:
 
 class AcidSlug(Monster):
     """酸液源石虫"""
-    def on_attack(self, target, damage):
-        # 实现减防特性
-        target.phy_def = max(0, target.phy_def - 15)
-        debug_print(f"{self.name} 使 {target.name} 防御力降低15")
+    def apply_damage_to_target(self, target, damage):
+        if super().apply_damage_to_target(target, damage):
+            # 实现减防特性
+            target.phy_def = max(0, target.phy_def - 15)
+            debug_print(f"{self.name} 使 {target.name} 防御力降低15")
+            return True
+        return False
 
 class HighEnergySlug(Monster):
     """高能源石虫"""
@@ -344,7 +367,7 @@ class HighEnergySlug(Monster):
             if m != self and m.faction != self.faction and m.is_alive:
                 distance = np.linalg.norm(m.position - self.position)
                 if distance <= explosion_radius:
-                    dmg = self.calculate_damage(m, 1560)
+                    dmg = self.calculate_damage(m, self.get_attack_power() * 4)
                     m.take_damage(dmg)
                     debug_print(f"{m.name} 受到{dmg}点爆炸伤害")
 
@@ -366,7 +389,7 @@ class 污染躯壳(Monster):
             self.speed_boost_counter = 5.0
             debug_print(f"{self.name} 进入极速状态！")
 
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         if self.speed_boost_counter > 0:
             self.speed_boost_counter -= delta_time
 
@@ -391,7 +414,7 @@ class 大喷蛛(Monster):
 
     def spawn_small(self):
         debug_print(f"{self.name} 释放小喷蛛")
-        self.battlefield.append_monster_name("小喷蛛", self.position + np.array([
+        self.battlefield.append_monster_name("小喷蛛", self.faction, self.position + np.array([
                         random.uniform(0, 1) * 0.001,
                         random.uniform(0, 1) * 0.001
                     ]))
@@ -408,7 +431,7 @@ class 宿主流浪者(Monster):
     def on_spawn(self):
         self.lastLifeRegenTime = 0
     
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         if  self.battlefield.gameTime - self.lastLifeRegenTime >= 1.0:
             self.health += 250
             self.health = np.minimum(self.health, self.max_health)
@@ -423,7 +446,7 @@ class 保鲜膜射手(Monster):
         self.phy_def += 3000
         self.magic_resist += 95
     
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         self.shieldCounter -= delta_time
         if self.shieldMode and self.shieldCounter <= 0:
             self.phy_def -= 3000
@@ -436,7 +459,7 @@ class 狂暴宿主组长(Monster):
     def on_spawn(self):
         self.lastHurtTime = 0
 
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         if self.battlefield.gameTime - self.lastHurtTime >= 1.0:
             self.health -= 500
             self.lastHurtTime = self.battlefield.gameTime
@@ -461,7 +484,7 @@ class 海螺(Monster):
             self.last_attack_time = self.battlefield.gameTime
             debug_print(f"{self.name} 进入防御模式")
 
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         if self.defenseMode and self.battlefield.gameTime - self.last_attack_time >= 20.0:
             self.phy_def -= 300
             self.move_speed = self.original_speed
@@ -479,16 +502,15 @@ class 拳击囚犯(Monster):
         self.attack_count += 1
         if self.attack_count == 4:
             self.attack_speed += 50
-            self.attack_power += int(self.attack_power * 0.5)
+            self.attack_power += self.attack_power * 0.5
             debug_print(f"{self.name}{self.id} 已经解放")
 
     def calculate_damage(self, target, damage):
         """计算伤害值"""
         target_def = target.phy_def
         if self.attack_count >= 4:
-            target_def = int(target_def * 0.4)
-        return np.maximum(damage - target_def, int(damage * 0.05))
-           
+            target_def = target_def * 0.4
+        return np.maximum(damage - target_def, damage * 0.05)
 
 
 
@@ -504,9 +526,11 @@ class 高塔术师(Monster):
         
         for t in targets:
             for m in self.get_aoe_targets(t):
-                damage = self.calculate_damage(m, self.attack_power)
+                damage = self.calculate_damage(m, self.get_attack_power())
                 if self.apply_damage_to_target(m, damage):
                     m.on_hit(self, damage)
+                    debug_print(f"{self.name}{self.id} 对 {m.name}{m.id} 造成{damage}点{self.attack_type}伤害")
+
         self.attack_time_counter = 0
 
     def get_aoe_targets(self, target):
@@ -546,7 +570,7 @@ class 冰原术师(Monster):
             return
         
         for m in targets:
-            damage = self.calculate_damage(m, self.attack_power)
+            damage = self.calculate_damage(m, self.get_attack_power())
             if self.apply_damage_to_target(m, damage):
                 m.on_hit(self, damage)
         self.attack_time_counter = 0
@@ -561,7 +585,9 @@ class 矿脉守卫(Monster):
             return
         damage = self.calculate_damage(attacker, 300)
         if self.apply_damage_to_target(attacker, damage):
-                attacker.on_hit(self, damage)
+            attacker.on_hit(self, damage)
+            debug_print(f"{self.name}{self.id} 对 {attacker.name}{attacker.id} 造成{damage}伤害")
+
 
 
 class 庞贝(Monster):
@@ -576,7 +602,7 @@ class 庞贝(Monster):
             return
         
         for m in targets:
-            damage = self.calculate_damage(m, self.attack_power)
+            damage = self.calculate_damage(m, self.get_attack_power())
             if self.apply_damage_to_target(m, damage):
                 m.on_hit(self, damage)
                 m.status_system.apply(BuffEffect(
@@ -588,9 +614,8 @@ class 庞贝(Monster):
 
     def increase_skill_cd(self, delta_time):
         super().increase_skill_cd(delta_time)
-        self.ring_attack_counter += delta_time
 
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         if not self.rage_mode and self.health < 0.5 * self.max_health:
             self.rage_mode = True
             self.attack_speed += 40
@@ -598,12 +623,14 @@ class 庞贝(Monster):
             
         targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=1)
         if len(targets) > 0 and np.linalg.norm(targets[0].position - self.position) < 0.8:
+            self.ring_attack_counter += delta_time
             if self.ring_attack_counter >= 10.0:
                 targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=9999)
                 targets = [t for t in targets if np.linalg.norm(t.position - self.position) < 1.4]
                 for tar in targets:
-                    if self.apply_damage_to_target(tar, 1000):
-                        tar.on_hit(self, 1000)
+                    dmg = self.calculate_damage(tar, 1000)
+                    if self.apply_damage_to_target(tar, dmg):
+                        tar.on_hit(self, dmg)
                 self.ring_attack_counter = 0
 
 class 食腐狗(Monster):
@@ -633,7 +660,7 @@ class 鼠鼠(Monster):
             self.speed_boost_counter = 10.0
             debug_print(f"{self.name}{self.id} 进入极速状态！")
 
-    def extra_update(self, delta_time):
+    def on_extra_update(self, delta_time):
         if self.speed_boost_counter > 0:
             self.speed_boost_counter -= delta_time
 
@@ -650,10 +677,12 @@ class 雪球(Monster):
             if len(targets) == 0:
                 return
             
+            self.attack_type = "魔法"
             for m in self.get_aoe_targets(targets[0]):
-                damage = self.calculate_damage(m, int(self.attack_power * 1.5))
+                damage = self.calculate_damage(m, self.get_attack_power() * 1.5)
                 if self.apply_damage_to_target(m, damage):
                     m.on_hit(self, damage)
+            self.attack_type = "物理"
             self.attack_range = 0.8
             self.first_attack = False
             debug_print(f"{self.name}{self.id} 投掷雪球")
@@ -705,7 +734,7 @@ class 杰斯顿(Monster):
                     return
                 # 对两个目标进行攻击，并且带3秒眩晕
                 for m in targets:
-                    damage = self.calculate_damage(m, self.attack_power)
+                    damage = self.calculate_damage(m, self.get_attack_power())
                     if self.apply_damage_to_target(m, damage):
                         m.on_hit(self, damage)
                         m.status_system.apply(BuffEffect(
@@ -727,8 +756,8 @@ class 杰斯顿(Monster):
 
     def calculate_damage(self, target : Monster, damage):
         if self.rage_mode and self.attack_count % 4 == 0:
-            target_def = int(target.phy_def * 0.4)
-            return np.maximum(damage - target_def, int(damage * 0.05))
+            target_def = target.phy_def * 0.4
+            return np.maximum(damage - target_def, damage * 0.05)
         return super().calculate_damage(target, damage)
 
     def on_death(self):
@@ -805,7 +834,7 @@ class 镜神(Monster):
                 self.charging_counter = 0
                 self.rage_counter = 0
 
-                damage = self.calculate_damage(target, self.attack_power * 2)
+                damage = self.calculate_damage(target, self.get_attack_power() * 2)
                 self.on_attack(target, damage)
                 if self.apply_damage_to_target(target, damage):
                     target.on_hit(self, damage)
@@ -818,7 +847,7 @@ class Vvan(Monster):
     """薇薇安娜"""
     def on_spawn(self):
         # 技力
-        self.skill_counter = 15
+        self.skill_counter = 20
         self.stage = 0
         self.charging_counter = 0
         self.original_move_speed = self.move_speed
@@ -831,18 +860,20 @@ class Vvan(Monster):
             self.charging_counter += delta_time
         super().increase_skill_cd(delta_time)
 
-    def on_attack(self, target : Monster, damage):
+    def on_extra_update(self, delta_time):
         # 如果处于默认状态，释放技能
         if self.stage == 0 and self.skill_counter >= 25:
-            self.stage = 1
-            self.move_speed = 0
-            self.charging_counter = 0
-            self.target_pos = target.position
-            debug_print(f"{self.name}{self.id} 开始蓄力")
-    
+            self.target = self.find_target()
+            if self.target and self.target.is_alive:
+                self.stage = 1
+                self.move_speed = 0
+                self.charging_counter = 0
+                self.target_pos = self.target.position
+                debug_print(f"{self.name}{self.id} 开始蓄力")
+
     def attack(self, target, gameTime):
         if self.stage == 1:
-            # 蓄力7秒后造成攻击力200%法术伤害
+            # 蓄力7秒后造成攻击力250%法术伤害
             if self.charging_counter >= 7:
                 self.stage = 0
                 self.move_speed = self.original_move_speed
@@ -851,12 +882,12 @@ class Vvan(Monster):
 
                 for m in self.battlefield.monsters:
                     if m.faction != self.faction and m.is_alive:
-                        distance = np.linalg.norm(self.target_pos - self.position)
+                        distance = np.linalg.norm(self.target_pos - m.position) #manhatton_distance(self.target_pos, m.position)
                         if distance <= 3.2:
-                            dmg = self.calculate_damage(m, int(self.attack_power * 2.5))
+                            dmg = self.calculate_damage(m, self.get_attack_power() * 2.5)
                             if self.apply_damage_to_target(m, dmg):
                                 target.on_hit(self, dmg)
-                                debug_print(f"{m.name} 受到{dmg}点微光之触伤害")
+                                debug_print(f"{m.name}{m.id} 受到 {self.name}{self.id} 的{dmg}点微光之触伤害")
 
                 self.attack_time_counter = 0
             return
@@ -901,7 +932,7 @@ class 萨克斯(Monster):
                 self.charging_counter = 0
 
                 for m in self.get_hit_enemies():
-                    dmg = self.calculate_damage(m, int(self.attack_power * 1.5))
+                    dmg = self.calculate_damage(m, self.get_attack_power() * 1.5)
                     if self.apply_damage_to_target(m, dmg):
                         target.on_hit(self, dmg)
                         debug_print(f"{m.name} 受到{dmg}点萨克斯伤害")
@@ -913,8 +944,8 @@ class 萨克斯(Monster):
 
     def get_hit_enemies(self):
         # 使用整数坐标进行快速分类
-        self_x = int(round(self.position[0]))
-        self_y = int(round(self.position[1]))
+        self_x = int(self.position[0])
+        self_y = int(self.position[1])
         
         
         smallest_up = 100
@@ -934,8 +965,8 @@ class 萨克斯(Monster):
                 continue
             
             # 转换为整数坐标（优化距离计算效率）
-            x = int(round(m.position[0]))
-            y = int(round(m.position[1]))
+            x = int(m.position[0])
+            y = int(m.position[1])
             
             # 列坐标匹配（同一垂直方向）
             if x == self_x:
@@ -973,7 +1004,7 @@ class 大君之赐(Monster):
         """承受伤害"""
         if self.invincible:
             return False
-        self.health -= int(damage * 0.1 + 0.5)
+        self.health -= damage * 0.1 + 0.5
         if self.health <= 0:
             self.is_alive = False
             self.on_death()
@@ -1004,10 +1035,10 @@ class 萨卡兹链术师(Monster):
         
         # 添加初始攻击
         attack_chain.append(self.AttackNode(current_target, current_multiplier))
-        visited.add(id(current_target))
+        visited.add(current_target.id)
 
         # 执行最多4次跳跃
-        for _ in range(4):
+        for _ in range(3):
             # 寻找下一个候选目标
             candidates = self._find_candidates(
                 current_target.position,
@@ -1027,7 +1058,7 @@ class 萨卡兹链术师(Monster):
             attack_chain.append(
                 self.AttackNode(current_target, current_multiplier)
             )
-            visited.add(id(current_target))
+            visited.add(current_target.id)
         
         return attack_chain
         
@@ -1048,7 +1079,7 @@ class 萨卡兹链术师(Monster):
         
         for enemy in enemies:
             # 排除已攻击目标
-            if id(enemy) in visited:
+            if enemy.id in visited:
                 continue
             
             # 计算欧氏距离
@@ -1062,18 +1093,27 @@ class 萨卡兹链术师(Monster):
         return candidates
 
     def attack(self, target, gameTime):
-        for node in self.chain_attack(target):
-            dmg = self.calculate_damage(node.target, int(self.attack_power * node.damage_multiplier))
-            if self.apply_damage_to_target(node.target, dmg):
-                target.on_hit(self, dmg)
-                debug_print(f"{node.target.name} 受到{dmg}点魔法伤害")
-        self.attack_time_counter = 0
+        direction = target.position - self.position
+        distance = np.linalg.norm(direction)
+            
+        if distance <= self.attack_range:
+            taragets = self.chain_attack(target)
+            for node in taragets:
+                base_dmg = self.get_attack_power() * node.damage_multiplier
+                dmg = self.calculate_damage(node.target, base_dmg)
+                if self.apply_damage_to_target(node.target, dmg):
+                    target.on_hit(self, dmg)
+                    # 所有人都有一样的凋亡损伤
+                    t = ElementType.NECRO_LEFT if self.faction == Faction.LEFT else ElementType.NECRO_RIGHT
+                    target.element_system.accumulate(t, self.get_attack_power() * 0.3)
+                    # debug_print(f"{self.name}{self.id} 对 {node.target.name}{node.target.id} 造成{dmg}点魔法伤害")
+            self.attack_time_counter = 0
 
     def on_death(self):
         debug_print(f"{self.name} 变成大君之赐")
-        self.battlefield.append_monster_name("大君之赐", self.position + np.array([
-                        random.uniform(0, 1) * 0.001,
-                        random.uniform(0, 1) * 0.001
+        self.battlefield.append_monster_name("大君之赐", self.faction, self.position + np.array([
+                        random.uniform(-1, 1) * 0.001,
+                        random.uniform(-1, 1) * 0.001
                     ]))
         
 

@@ -96,7 +96,7 @@ def main():
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-        #scene_config = {"left": {"1750哥": 5, "矿脉守卫": 6}, "right": {"高能源石虫": 22, "绵羊": 12}, "result": "right"}
+        #scene_config = { "left": { "宿主流浪者": 8 }, "right": { "船长": 5 }, "result": "right" }
 
         # 用户配置
         left_army = scene_config["left"]

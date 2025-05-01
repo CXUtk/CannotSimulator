@@ -1,51 +1,102 @@
-{"left": {"船长": 5, "拳击囚犯": 0}, "right": {"拳击囚犯": 9, "污染躯壳": 0}, "result": "left"}
-{"left": {"船长": 8, "拳击囚犯": 0}, "right": {"石头人": 2, "污染躯壳": 0}, "result": "left"}
-{"left": {"船长": 8, "拳击囚犯": 0}, "right": {"石头人": 2, "污染躯壳": 0}, "result": "left"}
-{"left": {"船长": 8, "拳击囚犯": 0}, "right": {"石头人": 2, "污染躯壳": 0}, "result": "left"}
-{"left": {"船长": 8, "拳击囚犯": 0}, "right": {"石头人": 2, "污染躯壳": 0}, "result": "left"}
-{"left": {"杰斯顿": 1, "狗pro": 0}, "right": {"1750哥": 5, "污染躯壳": 0}, "result": "left"}
-{"left": {"杰斯顿": 1, "狗pro": 0}, "right": {"1750哥": 5, "污染躯壳": 0}, "result": "left"}
-{"left": {"杰斯顿": 1, "狗pro": 0}, "right": {"1750哥": 5, "污染躯壳": 0}, "result": "left"}
-{"left": {"食腐狗": 8, "大盾哥": 13}, "right": {"绵羊": 11, "污染躯壳": 16}, "result": "left"}
-{"left": {"雪球": 3, "大盾哥": 0}, "right": {"驮兽": 1, "污染躯壳": 0}, "result": "left"}
-{"left": {"雪球": 5, "大盾哥": 0}, "right": {"驮兽": 0, "萨克斯": 5}, "result": "left"}
-{"left": {"雪球": 5, "大盾哥": 0}, "right": {"驮兽": 0, "萨克斯": 5}, "result": "left"}
-{"left": {"雪球": 5, "大盾哥": 0}, "right": {"驮兽": 0, "萨克斯": 5}, "result": "left"}
-{"left": {"雪球": 5, "大盾哥": 0}, "right": {"驮兽": 0, "萨克斯": 5}, "result": "left"}
-{"left": {"Vvan": 6, "雪球": 4}, "right": {"狗pro": 41, "绵羊": 11}, "result": "left"}
-{"left": {"Vvan": 6, "雪球": 4}, "right": {"狗pro": 41, "绵羊": 11}, "result": "left"}
-{"left": {"高能源石虫": 16, "雪球": 0}, "right": {"矿脉守卫": 4, "绵羊": 0}, "result": "left"}
-{"left": {"高能源石虫": 16, "雪球": 0}, "right": {"矿脉守卫": 4, "绵羊": 0}, "result": "left"}
-{"left": {"鼠鼠": 7, "雪球": 0}, "right": {"酸液源石虫": 30, "绵羊": 0}, "result": "left"}
-{"left": {"矿脉守卫": 9, "拳击囚犯": 0}, "right": {"Vvan": 4, "1750哥": 3}, "result": "left"}
-{"left": {"矿脉守卫": 9, "拳击囚犯": 0}, "right": {"Vvan": 4, "1750哥": 3}, "result": "left"}
-{"left": {"海螺": 10, "鼠鼠": 6}, "right": {"庞贝": 2, "污染躯壳": 15}, "result": "left"}
-{"left": {"船长": 6, "光剑": 5, "大喷蛛": 3}, "right": {"食腐狗": 7, "狗pro": 32, "矿脉守卫": 4}, "result": "left"}
-{"left": {"船长": 6, "光剑": 5, "大喷蛛": 3}, "right": {"食腐狗": 7, "狗pro": 32, "矿脉守卫": 4}, "result": "left"}
-{"left": {"1750哥": 5, "矿脉守卫": 6}, "right": {"高能源石虫": 22, "绵羊": 12}, "result": "right"}
-{"left": {"1750哥": 2}, "right": {"大盾哥": 10}, "result": "right"}
+{ "left": { "1750哥": 2 }, "right": { "大盾哥": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3, "雪球": 4 }, "right": { "驮兽": 4 }, "result": "right" }
+{ "left": { "高能源石虫": 22 }, "right": { "驮兽": 3 }, "result": "left" }
+{ "left": { "矿脉守卫": 4 }, "right": { "Vvan": 5 }, "result": "left" }
+{ "left": { "拳击囚犯": 12, "雪球": 5 }, "right": { "高塔术师": 3, "食腐狗": 6, "污染躯壳": 10 }, "result": "right" }
+{ "left": { "Vvan": 8 }, "right": { "宿主流浪者": 6, "光剑": 3 }, "result": "right" }
+{ "left": { "1750哥": 4, "光剑": 6 }, "right": { "大盾哥": 12, "高能源石虫": 26 }, "result": "right" }
+{ "left": { "大喷蛛": 6 }, "right": { "萨卡兹大剑手": 8, "鼠鼠": 5 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 4, "鼠鼠": 6 }, "right": { "保鲜膜": 14, "驮兽": 3 }, "result": "right" }
+{ "left": { "Vvan": 4 }, "right": { "酸液源石虫": 23 }, "result": "left" }
+{ "left": { "1750哥": 4, "萨卡兹链术师": 3, "矿脉守卫": 5 }, "right": { "高能源石虫": 21, "冰原术师": 9, "光剑": 4 }, "result": "left" }
+{ "left": { "酸液源石虫": 23 }, "right": { "冰原术师": 11 }, "result": "left" }
+{ "left": { "宿主流浪者": 7, "拳击囚犯": 10, "Vvan": 4 }, "right": { "萨卡兹大剑手": 16, "海螺": 14 }, "result": "right" }
+{ "left": { "高能源石虫": 31 }, "right": { "萨卡兹链术师": 6 }, "result": "right" }
+{ "left": { "食腐狗": 10 }, "right": { "庞贝": 3 }, "result": "left" }
+{ "left": { "光剑": 6 }, "right": { "酸液源石虫": 31 }, "result": "right" }
+{ "left": { "1750哥": 4, "污染躯壳": 15 }, "right": { "大喷蛛": 5, "雪球": 5 }, "result": "right" }
+{ "left": { "雪球": 5 }, "right": { "宿主流浪者": 11 }, "result": "right" }
+{ "left": { "宿主流浪者": 10 }, "right": { "驮兽": 3 }, "result": "left" }
+{ "left": { "萨卡兹大剑手": 10, "光剑": 4, "鼠鼠": 4 }, "right": { "驮兽": 3, "矿脉守卫": 6 }, "result": "left" }
+{ "left": { "船长": 10 }, "right": { "光剑": 3 }, "result": "right" }
+{ "left": { "宿主流浪者": 8, "大喷蛛": 4 }, "right": { "鳄鱼": 13, "Vvan": 5 }, "result": "right" }
+{ "left": { "绵羊": 11, "鼠鼠": 5 }, "right": { "高塔术师": 4, "食腐狗": 8 }, "result": "right" }
+{ "left": { "庞贝": 2 }, "right": { "鼠鼠": 5 }, "result": "right" }
+{ "left": { "狗pro": 31, "绵羊": 10, "杰斯顿": 2 }, "right": { "庞贝": 2, "大喷蛛": 5, "萨卡兹链术师": 4 }, "result": "right" }
+{ "left": { "保鲜膜": 15, "萨克斯": 4 }, "right": { "冰原术师": 11, "海螺": 10 }, "result": "left" }
+{ "left": { "Vvan": 6, "萨克斯": 5 }, "right": { "船长": 6, "镜神": 8 }, "result": "right" }
+{ "left": { "庞贝": 2 }, "right": { "鼠鼠": 5 }, "result": "right" }
+{ "left": { "庞贝": 2 }, "right": { "鼠鼠": 5 }, "result": "right" }
+{ "left": { "庞贝": 2 }, "right": { "鼠鼠": 5 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+
+
+{ "left": { "1750哥": 2 }, "right": { "大盾哥": 10 }, "result": "right" }
+{ "left": { "萨卡兹链术师": 3 }, "right": { "绵羊": 10 }, "result": "right" }
+{ "left": { "高能源石虫": 22 }, "right": { "驮兽": 3 }, "result": "left" }
+{ "left": { "酸液源石虫": 25, "萨卡兹大剑手": 11 }, "right": { "1750哥": 4, "高塔术师": 4 }, "result": "left" }
+{ "left": { "酸液源石虫": 40 }, "right": { "1750哥": 6 }, "result": "left" }
+{ "left": { "1750哥": 4, "萨卡兹链术师": 3, "矿脉守卫": 5 }, "right": { "高能源石虫": 21, "冰原术师": 9, "光剑": 4 }, "result": "left" }
+{ "left": { "酸液源石虫": 23 }, "right": { "冰原术师": 11 }, "result": "left" }
+{ "left": { "宿主流浪者": 7, "拳击囚犯": 10, "Vvan": 4 }, "right": { "萨卡兹大剑手": 16, "海螺": 14 }, "result": "right" }
+{ "left": { "高能源石虫": 31 }, "right": { "萨卡兹链术师": 6 }, "result": "right" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "光剑": 5 }, "right": { "石头人": 1 }, "result": "left" }
+{ "left": { "宿主流浪者": 8 }, "right": { "船长": 5 }, "result": "right" }
+{ "left": { "光剑": 6 }, "right": { "酸液源石虫": 31 }, "result": "right" }
+{ "left": { "1750哥": 4, "污染躯壳": 15 }, "right": { "大喷蛛": 5, "雪球": 5 }, "result": "right" }
+{ "left": { "雪球": 5 }, "right": { "宿主流浪者": 11 }, "result": "right" }
+{ "left": { "萨卡兹大剑手": 10, "光剑": 4, "鼠鼠": 4 }, "right": { "驮兽": 3, "矿脉守卫": 6 }, "result": "left" }
+{ "left": { "船长": 10 }, "right": { "光剑": 3 }, "result": "right" }
+{ "left": { "高能源石虫": 20, "1750哥": 3 }, "right": { "狗pro": 68, "Vvan": 5 }, "result": "left" }
+{ "left": { "狗pro": 31, "绵羊": 10, "杰斯顿": 2 }, "right": { "庞贝": 2, "大喷蛛": 5, "萨卡兹链术师": 4 }, "result": "right" }
+{ "left": { "保鲜膜": 15, "萨克斯": 4 }, "right": { "冰原术师": 11, "海螺": 10 }, "result": "left" }
+{ "left": { "Vvan": 6, "萨克斯": 5 }, "right": { "船长": 6, "镜神": 8 }, "result": "right" }
+{ "left": { "酸液源石虫": 22, "庞贝": 2, "光剑": 5 }, "right": { "狗pro": 36, "1750哥": 4, "高塔术师": 4 }, "result": "left" }
+{ "left": { "1750哥": 5, "污染躯壳": 19 }, "right": { "Vvan": 5, "食腐狗": 6, "海螺": 11 }, "result": "left" }
+{ "left": { "光剑": 5 }, "right": { "石头人": 1 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "Vvan": 5 }, "right": { "镜神": 6 }, "result": "left" }
+{ "left": { "高能源石虫": 31 }, "right": { "萨卡兹链术师": 6 }, "result": "right" }
+
+
+{"left": {"狗pro": 35, "大盾哥": 12, "雪球": 4}, "right": {"萨卡兹大剑手": 11, "庞贝": 2, "冰原术师": 12}, "result": "right"}
 {"left": {"萨卡兹链术师": 3}, "right": {"绵羊": 10}, "result": "right"}
-{"left": {"矿脉守卫": 4}, "right": {"Vvan": 5}, "result": "left"}
-{"left": {"Vvan": 8}, "right": {"宿主流浪者": 6, "光剑": 3}, "result": "right"}
-{"left": {"1750哥": 4, "光剑": 6}, "right": {"大盾哥": 12, "高能源石虫": 26}, "result": "right"}
-{"left": {"大喷蛛": 6}, "right": {"萨卡兹大剑手": 8, "鼠鼠": 5}, "result": "right"}
 {"left": {"酸液源石虫": 25, "萨卡兹大剑手": 11}, "right": {"1750哥": 4, "高塔术师": 4}, "result": "left"}
 {"left": {"酸液源石虫": 40}, "right": {"1750哥": 6}, "result": "left"}
-{"left": {"1750哥": 5, "矿脉守卫": 6}, "right": {"高能源石虫": 22, "绵羊": 12}, "result": "right"}
-{"left": {"1750哥": 5, "矿脉守卫": 6}, "right": {"高能源石虫": 22, "绵羊": 12}, "result": "right"}
-{"left": {"1750哥": 2}, "right": {"大盾哥": 10}, "result": "right"}
-{"left": {"矿脉守卫": 4}, "right": {"Vvan": 5}, "result": "left"}
-{"left": {"1750哥": 4, "光剑": 6}, "right": {"大盾哥": 12, "高能源石虫": 26}, "result": "right"}
-{"left": {"酸液源石虫": 25, "萨卡兹大剑手": 11}, "right": {"1750哥": 4, "高塔术师": 4}, "result": "left"}
-{"left": {"酸液源石虫": 40}, "right": {"1750哥": 6}, "result": "left"}
+{"left": {"驮兽": 3}, "right": {"污染躯壳": 18}, "result": "left"}
 {"left": {"Vvan": 4}, "right": {"酸液源石虫": 23}, "result": "left"}
 {"left": {"1750哥": 4, "萨卡兹链术师": 3, "矿脉守卫": 5}, "right": {"高能源石虫": 21, "冰原术师": 9, "光剑": 4}, "result": "left"}
-{"left": {"宿主流浪者": 10, "萨克斯": 4}, "right": {"冰原术师": 15, "萨卡兹链术师": 5}, "result": "right"}
-{"left": {"Vvan": 5, "高塔术师": 4}, "right": {"高能源石虫": 18, "海螺": 10}, "result": "left"}
-{"left": {"高塔术师": 6}, "right": {"高能源石虫": 17, "鳄鱼": 8}, "result": "left"}
-{"left": {"酸液源石虫": 23}, "right": {"冰原术师": 11}, "result": "left"}
-{"left": {"宿主流浪者": 7, "拳击囚犯": 10, "Vvan": 4}, "right": {"萨卡兹大剑手": 16, "海螺": 14}, "result": "right"}
-{"left": {"高能源石虫": 31}, "right": {"萨卡兹链术师": 6}, "result": "right"}
-{"left": {"船长": 9, "驮兽": 3}, "right": {"冰原术师": 14, "鼠鼠": 6}, "result": "left"}
 {"left": {"Vvan": 5}, "right": {"镜神": 6}, "result": "left"}
-{"left": {"光剑": 5}, "right": {"石头人": 1}, "result": "left"}
+{"left": {"宿主流浪者": 8}, "right": {"船长": 5}, "result": "right"}
+{"left": {"光剑": 6}, "right": {"酸液源石虫": 31}, "result": "right"}
+{"left": {"1750哥": 4, "污染躯壳": 15}, "right": {"大喷蛛": 5, "雪球": 5}, "result": "right"}
+{"left": {"船长": 10}, "right": {"光剑": 3}, "result": "right"}
+{"left": {"宿主流浪者": 8, "大喷蛛": 4}, "right": {"鳄鱼": 13, "Vvan": 5}, "result": "right"}
+{"left": {"阿咬": 37, "冰原术师": 10, "矿脉守卫": 4}, "right": {"保鲜膜": 16, "绵羊": 12}, "result": "right"}
