@@ -391,6 +391,7 @@ class Monster:
                 return False
         if self.invincible:
             return False
+        return True
 
     def take_damage(self, damage, attack_type) -> bool:
         """承受伤害"""
@@ -1366,23 +1367,29 @@ class 凋零萨卡兹(Monster):
                 debug_print(f"{self.name}{self.id} 开始蓄力")
         elif self.stage == 1:
             self.charging_counter += delta_time
-            # 法术伤害
-            if self.charging_counter % 1 < delta_time:
-                dmg = self.calculate_damage(self.locked_target, self.get_attack_power() * 0.4)
-                if self.apply_damage_to_target(self.locked_target, dmg):
-                    self.locked_target.on_hit(self, dmg)
-                    debug_print(f"{self.locked_target.name}{self.locked_target.id} 受到 {self.name}{self.id} 的{dmg}点法术凋零伤害")
-            # 蓄力完成的凋亡损伤
-            if self.charging_counter >= 8.0:
-                for m in self.get_aoe_targets(self.locked_target):
-                    dmg = self.get_attack_power() * 2.2
-                    m.element_system.accumulate(ElementType.NECRO_RIGHT, dmg)
-                    # damage = self.calculate_damage(m, self.get_attack_power() * 2)
-                    m.on_hit(self, dmg)
-                    debug_print(f"{m.name}{m.id} 受到 {self.name}{self.id} 的{dmg}点凋亡损伤")
+
+            if not self.locked_target.is_alive:
                 self.stage = 0
                 self.move_speed = self.original_move_speed
                 self.locked_target = None
+            else:
+                # 法术伤害
+                if self.charging_counter % 1 < delta_time:
+                    dmg = self.calculate_damage(self.locked_target, self.get_attack_power() * 0.4)
+                    if self.apply_damage_to_target(self.locked_target, dmg):
+                        self.locked_target.on_hit(self, dmg)
+                        debug_print(f"{self.locked_target.name}{self.locked_target.id} 受到 {self.name}{self.id} 的{dmg}点法术凋零伤害")
+                # 蓄力完成的凋亡损伤
+                if self.charging_counter >= 8.0:
+                    for m in self.get_aoe_targets(self.locked_target):
+                        dmg = self.get_attack_power() * 2.2
+                        m.element_system.accumulate(ElementType.NECRO_RIGHT, dmg)
+                        # damage = self.calculate_damage(m, self.get_attack_power() * 2)
+                        m.on_hit(self, dmg)
+                        debug_print(f"{m.name}{m.id} 受到 {self.name}{self.id} 的{dmg}点凋亡损伤")
+                    self.stage = 0
+                    self.move_speed = self.original_move_speed
+                    self.locked_target = None
                 
     def get_aoe_targets(self, target):
         aoe_targets = [m for m in self.battlefield.monsters 
@@ -1406,7 +1413,7 @@ class 凋零萨卡兹(Monster):
                     target.on_hit(self, damage)
                 self.attack_time_counter = 0
 
-class 洗地机(Monster):
+class 洗地车(Monster):
     """洗地机"""
     def on_spawn(self):
         self.stage = 0
@@ -1473,7 +1480,9 @@ class 护盾哥(Monster):
                     self.move_speed += self.move_speed * 2
                     self.phy_def -= 1750
                     # 计算余下伤害
-                    damage = self.magic_shield
+                    damage = -self.magic_shield
+                else:
+                    damage = 0
         self.health -= damage
         if self.health <= 0:
             self.is_alive = False
@@ -1579,7 +1588,7 @@ class MonsterFactory:
         "雪境精锐": 雪境精锐,
         "榴弹佣兵": 榴弹佣兵,
         "凋零萨卡兹": 凋零萨卡兹,
-        "洗地机": 洗地机,
+        "洗地车": 洗地车,
         "衣架": 衣架,
         "标枪恐鱼": 标枪恐鱼,
         "护盾哥": 护盾哥,

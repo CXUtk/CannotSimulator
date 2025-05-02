@@ -25,9 +25,9 @@ class EffectZone:
     def update(self, delta_time):
         """每帧更新逻辑"""
         # 具体效果由子类实现
-        raise NotImplementedError
+        pass
 
-    def should_clear(self, delta_time) -> bool:
+    def should_clear(self) -> bool:
         """场地效果清除逻辑"""
         # 具体效果由子类实现，默认不清除
         return False
@@ -61,7 +61,7 @@ class PoisonZone(EffectZone):
     def contains(self, position) -> bool:
         """判断点是否在区域内"""
         if self.battle_field.danger_zone_size() > 0:
-            size = self.danger_zone_size()
+            size = self.battle_field.danger_zone_size()
             if (position[0] < size or position[0] > self.battle_field.map_size[0] - size)\
                         or (position[1] < size or position[1] > self.battle_field.map_size[1] - size):
                 return True

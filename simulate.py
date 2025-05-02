@@ -45,6 +45,28 @@ MONSTER_MAPPING = {
     31: "海螺",
     32: "污染躯壳",
     33: "矿脉守卫",
+    34: "炮god",
+    35: "红刀哥",
+    36: "大斧",
+    37: "护盾哥",
+    38: "冰爆虫",
+    39: "机鳄",
+    40: "沸血骑士",
+    41: "衣架",
+    42: "畸变之矛",
+    43: "榴弹佣兵",
+    44: "标枪恐鱼",
+    45: "雪境精锐",
+    46: "狂躁珊瑚",
+    47: "拳击手",
+    48: "洗地车",
+    49: "凋零萨卡兹",
+    50: "高普尼克",
+    51: "跑男",
+    52: "门",
+    53: "小锤",
+    54: "爱蟹者",
+    55: "酒桶",
     # 根据实际数据继续扩展...
 }
 
@@ -61,9 +83,9 @@ def process_battle_data(csv_path):
     
     for _, row in df.iterrows():
         # 分解左右阵营数据
-        left_data = row[0:34]    # 1-34列 (0-based索引0-33)
-        right_data = row[34:68]  # 35-68列 (0-based索引34-67)
-        winner = row[68]         # 69列 (0-based索引68)
+        left_data = row[0:56]    # 1-56列 (0-based索引0-55)
+        right_data = row[56:112]  # 56-112列 (0-based索引56-111)
+        winner = row[112]         # 69列 (0-based索引112)
         
         # 构建阵营字典（ID从1开始）
         left_army = {MONSTER_MAPPING[i]: int(count) for i, count in enumerate(left_data) if count > 0}
@@ -90,13 +112,13 @@ def main():
     #     scene_config = json.load(f)
 
     # 使用示例
-    battle_data = process_battle_data("arknights.csv")
+    battle_data = process_battle_data("arknights-new.csv")
 
     
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-        scene_config = { "left": { "大喷蛛": 5, "护盾哥": 5, "污染躯壳": 15 }, "right": { "机鳄": 7, "高普尼克": 2, "萨卡兹大剑手": 12}, "result": "left" }
+        #scene_config = { "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 
         # 用户配置
         left_army = scene_config["left"]
@@ -109,7 +131,7 @@ def main():
         
         left_win = False
         # 开始战斗
-        if battlefield.run_battle(visualize=True) == Faction.LEFT:
+        if battlefield.run_battle(visualize=False) == Faction.LEFT:
             left_win = True
         
         if (left_win and scene_config["result"] == "left") or (not left_win and scene_config["result"] == "right"):
@@ -122,7 +144,7 @@ def main():
 
         matches += 1
         print(f"当前胜率：{win} / {matches}")
-        break
+        #break
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
     # profiler.enable()
