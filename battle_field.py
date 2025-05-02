@@ -5,15 +5,13 @@ import time
 import numpy as np
 from enum import Enum
 
-from monsters import Monster, MonsterFactory
-from utils import BuffEffect, BuffType, Faction
+from monsters import MonsterFactory
+from utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType, Faction
+from zone import PoisonZone
 
 # 场景参数
 MAP_SIZE = np.array([15, 9])  # 场景宽度（单位：格）
 SPAWN_AREA = 2  # 阵营出生区域宽度
-
-VIRTUAL_TIME_STEP = 60 # 60帧相当于一秒
-VIRTUAL_TIME_DELTA = 1.0 / VIRTUAL_TIME_STEP
 
 
 from collections import defaultdict
@@ -82,6 +80,10 @@ class Battlefield:
         self.map_size = MAP_SIZE
         self.monster_data = monster_data
         self.globalId = 0
+        self.effect_zones = []
+        self.dead_count = {Faction.LEFT: 0, Faction.RIGHT: 0}
+
+        self.effect_zones.append(PoisonZone(self))
 
 
     def append_monster(self, monster):
@@ -149,6 +151,19 @@ class Battlefield:
         elif len(alive_factions) == 0:
             return Faction.LEFT
         return None
+    
+    def check_zone(self):
+        new_zone = []
+        # 检查场地效果
+        for zone in self.effect_zones:
+            zone.update()
+            if zone.should_clear():
+                continue
+            for m in self.monsters:
+                if zone.contains(m.position):
+                    zone.apply_effect(m)
+            new_zone.append(zone)
+        self.effect_zones = new_zone
 
     def run_battle(self, visualize=False):
         """运行战斗直到决出胜负"""
@@ -158,17 +173,8 @@ class Battlefield:
             if visualize and self.round % 120 == 0:
                 self.print_battlefield()
             self.round += 1
-            # 计算毒圈
-            if self.danger_zone_size() > 0:
-                size = self.danger_zone_size()
-                for m in self.monsters:
-                    if (m.position[0] < size or m.position[0] > self.map_size[0] - size)\
-                          or (m.position[1] < size or m.position[1] > self.map_size[1] - size):
-                        m.status_system.apply(BuffEffect(
-                            type=BuffType.POWER_STONE,
-                            duration=VIRTUAL_TIME_DELTA * 2,
-                            source=self
-                        ))
+
+            self.check_zone()
 
             # 更新所有单位
             for m in self.monsters:
@@ -189,7 +195,9 @@ class Battlefield:
         if self.gameTime < 60:
             return 0
         return int((self.gameTime - 60) / 20) + 1
-        
+    
+    def add_new_zone(self, zone):
+        self.effect_zones.append(zone)
 
     def print_battlefield(self):
         """二维战场可视化"""

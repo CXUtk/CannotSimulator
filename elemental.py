@@ -47,11 +47,21 @@ class ElementBurst:
             self.dot_damage = 100
             self.dot_timer = 0
             debug_print(f"{self.owner.name}{self.owner.id} 的 凋亡损伤爆发！")
+        elif self.trigger_element == ElementType.FIRE:
+            self.duration = 10
+            dmg = 7000
+            debug_print(f"{self.owner.name}{self.owner.id} 灼燃发期间受到{dmg}点伤害")
+            self.owner.take_damage(dmg, "真实")
+            self.owner.magic_resist -= 20
 
     @property
     def progress(self):
         """效果进度百分比"""
         return min(1.0, (self.owner.battlefield.gameTime - self.start_time) / self.duration)
+
+    def on_clear(self):
+        if self.trigger_element == ElementType.FIRE:
+            self.owner.magic_resist += 20
 
     def update_effect(self, deltaTime):
         """更新动态效果"""
@@ -63,15 +73,16 @@ class ElementBurst:
             self.dot_timer += deltaTime
             if self.dot_timer >= 1.0:
                 debug_print(f"{self.owner.name}{self.owner.id} 凋亡损伤爆发期间受到{self.dot_damage}伤害")
-                self.owner.take_damage(self.dot_damage)
+                self.owner.take_damage(self.dot_damage, "真实")
                 self.dot_timer = 0
         elif self.trigger_element == ElementType.NECRO_LEFT:
             # 持续伤害应用
             self.dot_timer += deltaTime
             if self.dot_timer >= 1.0:
                 debug_print(f"{self.owner.name}{self.owner.id} 凋亡损伤爆发期间受到{self.dot_damage}伤害")
-                self.owner.take_damage(self.dot_damage)
+                self.owner.take_damage(self.dot_damage, "真实")
                 self.dot_timer = 0
+
 
 # class AdvancedMonster:
 #     def __init__(self, max_hp):
