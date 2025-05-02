@@ -93,4 +93,6 @@
 { "left": { "Vvan": 5 }, "right": { "衣架": 13 }, "result": "right" }
 { "left": { "拳击囚犯": 11, "门": 3 }, "right": { "萨克斯": 4, "驮兽": 3 }, "result": "left" }
 { "left": { "机鳄": 8, "洗地车": 2 }, "right": { "高能源石虫": 19, "大喷蛛": 5 }, "result": "right" }
-{ "left": { "1750哥": 3, "衣架": 12, "榴弹佣兵": 6 }, "right": { "大盾哥": 13, "海螺": 8, "小锤": 2 }, "result": "left" }
+{ "left": { "1750哥": 3, "衣架": 12, "榴弹佣兵": 6 }, "right": { "大盾哥": 13, "海螺": 8, "小锤": 2 }, "result": "left" }{"left": {"Vvan": 5}, "right": {"衣架": 13}, "result": "right"}
+{"left": {"Vvan": 5}, "right": {"衣架": 13}, "result": "right"}
+{"left": {"Vvan": 5}, "right": {"衣架": 13}, "result": "right"}

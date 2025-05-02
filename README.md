@@ -30,6 +30,28 @@
 
 **示例**：
 
+具体可以参考 `simulate.py`
+```python
+from battle_field import Battlefield, Faction
+
+scene_config = { "left": { "Vvan": 5 }, "right": { "衣架": 13 }, "result": "right" }
+
+# 用户配置
+left_army = scene_config["left"]
+right_army = scene_config["right"]
+    
+# 初始化战场
+battlefield = Battlefield(monster_data)
+
+# 去除掉不符合格式的配置
+if not battlefield.setup_battle(left_army, right_army, monster_data):
+    # 处理异常
+
+# 开始战斗，并且返回胜者，可以打开visualize模式来可视化结果
+winner = battlefield.run_battle(visualize=VISUALIZATION_MODE)
+
+```
+
 ### 参数说明
 ---
 

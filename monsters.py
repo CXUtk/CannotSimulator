@@ -11,8 +11,6 @@ from elemental import ElementAccumulator, ElementType
 from utils import BuffEffect, BuffType, debug_print, Faction
 from zone import WineZone
 
-
-
 def calculate_normal_dmg(defense, magic_resist, dmg, magic=False):
     """计算伤害值"""
     if not magic:
