@@ -147,6 +147,13 @@ class StatusSystem:
         # 处理持续伤害
         self._process_dot(delta_time)
 
+    def reset(self):
+        new_effects = []
+        for effect in self.effects:
+            self.remove(effect)
+
+        self.effects = new_effects
+
     def _process_dot(self, delta_time):
         fire = next((e for e in self.effects if e.type == BuffType.FIRE), None)
         if fire:
@@ -296,7 +303,7 @@ class Monster:
         norm_direction = direction / np.linalg.norm(direction) if np.any(direction) else direction
         self.position += norm_direction * self.move_speed * delta_time
 
-        RADIUS = 0.03
+        RADIUS = 0.04
         # 碰撞检测
         for m in self.battlefield.monsters:
             if not m.is_alive or m == self:
@@ -426,6 +433,7 @@ class HighEnergySlug(Monster):
                     dmg = self.calculate_damage(m, self.get_attack_power() * 4)
                     m.take_damage(dmg, self.attack_type)
                     debug_print(f"{m.name} 受到{dmg}点爆炸伤害")
+        super().on_death()
 
 class 巧克力虫(Monster):
     """灼热源石虫"""
@@ -455,6 +463,7 @@ class 冰爆虫(Monster):
                     )
                     m.status_system.apply(chill)
                     debug_print(f"{m.name} 受到{dmg}点爆炸伤害")
+        super().on_death()
 
 class 污染躯壳(Monster):
     """污染躯壳"""
@@ -495,6 +504,7 @@ class 大喷蛛(Monster):
         self.spawn_small()
         self.spawn_small()
         self.spawn_small()
+        super().on_death()
 
 
     def spawn_small(self):
@@ -869,6 +879,8 @@ class 杰斯顿(Monster):
 
             self.is_alive = True
             self.health = self.max_health
+            self.element_system = ElementAccumulator(self)
+            self.status_system.reset()
             print(f"{self.name}{self.id}已进入狂暴状态")
         else:
             super().on_death()
@@ -1556,6 +1568,29 @@ class 沸血骑士(Monster):
         self.attack_speed = self.original_attack_speed + 5 * stack
 
 
+class 门(Monster):
+    """门"""
+    def on_extra_update(self, delta_time):
+        self.dizzy = False
+        self.frozen = False
+        return super().on_extra_update(delta_time)
+    def on_death(self):
+        enemies = enemies = [
+            m for m in self.battlefield.monsters 
+            if m.is_alive 
+            and m.faction != self.faction
+        ]
+        if not enemies:
+            return
+        target = random.choice(enemies)
+        debug_print(f"{self.name}{self.id} 带走了{target.name}{target.id}")
+        target.health = 0
+        target.invincible = False
+        target.take_damage(1, "真实")
+        super().on_death()
+
+
+
 class MonsterFactory:
     _monster_classes = {
         "酸液源石虫": AcidSlug,
@@ -1597,6 +1632,7 @@ class MonsterFactory:
         "红刀哥": 红刀哥,
         "沸血骑士": 沸血骑士,
         "拳击手": 拳击手,
+        "门": 门,
 
         # 添加更多映射...
         "炮god": 炮god

@@ -27,7 +27,7 @@ class EffectZone:
         # 具体效果由子类实现
         pass
 
-    def should_clear(self) -> bool:
+    def should_clear(self, delta_time) -> bool:
         """场地效果清除逻辑"""
         # 具体效果由子类实现，默认不清除
         return False
@@ -62,7 +62,7 @@ class PoisonZone(EffectZone):
         """判断点是否在区域内"""
         if self.battle_field.danger_zone_size() > 0:
             size = self.battle_field.danger_zone_size()
-            if (position[0] < size or position[0] > self.battle_field.map_size[0] - size)\
+            if (position[0] < size + 1 or position[0] > self.battle_field.map_size[0] - size - 1)\
                         or (position[1] < size or position[1] > self.battle_field.map_size[1] - size):
                 return True
         return False

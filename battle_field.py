@@ -157,7 +157,7 @@ class Battlefield:
         # 检查场地效果
         for zone in self.effect_zones:
             zone.update(VIRTUAL_TIME_DELTA)
-            if zone.should_clear():
+            if zone.should_clear(VIRTUAL_TIME_DELTA):
                 continue
             for m in self.monsters:
                 if zone.contains(m.position):
