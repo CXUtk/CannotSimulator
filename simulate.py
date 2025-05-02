@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from battle_field import Battlefield, Faction
-import utils
+from .battle_field import Battlefield, Faction
+from .utils import DEBUG
 
 # ID与怪物名称映射表 
 MONSTER_MAPPING = {
@@ -116,13 +116,15 @@ def main():
     battle_data = process_battle_data("arknights-new.csv")
 
     VISUALIZATION_MODE = True
-    utils.DEBUG = VISUALIZATION_MODE
+    DEBUG = VISUALIZATION_MODE
 
     
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-        scene_config = { "left": { "Vvan": 5 }, "right": { "衣架": 13 }, "result": "right" }
+        scene_config = { "left": { "宿主流浪者": 6, "小锤": 0, "光剑":0 }, "right": { "鳄鱼": 10, "1750哥": 0, "炮god": 0 }, "result": "right" }
+
+
 
         #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 

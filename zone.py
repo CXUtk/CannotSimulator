@@ -5,7 +5,7 @@ import time
 
 import numpy as np
 
-from utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType
+from .utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType
 
 class ZoneType:
     POISON = 0  #毒圈

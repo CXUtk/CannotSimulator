@@ -7,9 +7,9 @@ from enum import Enum
 from typing import List
 import numpy as np
 
-from elemental import ElementAccumulator, ElementType
-from utils import BuffEffect, BuffType, debug_print, Faction
-from zone import WineZone
+from .elemental import ElementAccumulator, ElementType
+from .utils import BuffEffect, BuffType, debug_print, Faction
+from .zone import WineZone
 
 def calculate_normal_dmg(defense, magic_resist, dmg, magic=False):
     """计算伤害值"""
@@ -180,9 +180,10 @@ class StatusSystem:
         power_stone = next((e for e in self.effects if e.type == BuffType.POWER_STONE), None)
         if power_stone:
             self.power_stay_counter += delta_time
-            if self.corrupt_dmg_counter % 1 < delta_time:
-                damage = 0.005 * self.owner.max_health * int(self.power_stay_counter)
-                self.owner.take_damage(damage, "真实")
+            if self.power_stay_counter % 1 < delta_time:
+                damage = 0.005 * self.owner.max_health * self.power_stay_counter
+                if self.owner.take_damage(damage, "真实"):
+                    debug_print(f"{self.owner.name}{self.owner.id} 受到了毒圈的{damage}伤害")
 
     def _init_effect(self, effect):
         """初始化效果"""
@@ -202,7 +203,7 @@ class StatusSystem:
             self.owner.dizzy = True
         elif effect.type == BuffType.POWER_STONE:
             self.owner.attack_speed += 50
-            self.owner.attack_multiplier *= 2
+            self.owner.attack_multiplier += 1
             self.owner.move_speed *= 1.5
             self.power_stay_counter = 0
             debug_print(f"{self.owner.name}{self.owner.id} 进入了毒圈！")
@@ -226,8 +227,10 @@ class StatusSystem:
             self.owner.dizzy = False
         elif effect.type == BuffType.POWER_STONE:
             self.owner.attack_speed -= 50
-            self.owner.attack_multiplier /= 2
+            self.owner.attack_multiplier -= 1
             self.owner.move_speed /= 1.5
+            self.power_stay_counter = 0
+            debug_print(f"{self.owner.name}{self.owner.id} 离开了毒圈！")
         elif effect.type == BuffType.WINE:
             self.owner.attack_speed -= 100
             self.owner.phys_dodge -= 80
@@ -905,6 +908,7 @@ class 镜神(Monster):
         self.charging_counter = 0
         self.rage_counter = 0
         self.original_move_speed = self.move_speed
+        self.locked_target = None
     
     def increase_skill_cd(self, delta_time):
         if self.stage == 0:
@@ -916,34 +920,46 @@ class 镜神(Monster):
 
         if self.stage == 2 and self.rage_counter >= 20:
             self.stage = 0
-            self.move_speed = self.original_move_speed
             self.attack_speed -= 100
             self.skill_counter = 0
         super().increase_skill_cd(delta_time)
 
-    def on_attack(self, target, damage):
+    def on_extra_update(self, delta_time):
         # 如果处于默认状态，释放技能
         if self.stage == 0 and self.skill_counter >= 35:
-            self.stage = 1
-            self.move_speed = 0
-            self.charging_counter = 0
-            debug_print(f"{self.name}{self.id} 开始蓄力")
+            direction = self.target.position - self.position
+            distance = np.linalg.norm(direction)
+
+            if distance <= self.attack_range:
+                self.locked_target = self.target
+                self.stage = 1
+                self.move_speed = 0
+                self.charging_counter = 0
+                debug_print(f"{self.name}{self.id} 开始蓄力")
+
+        if self.stage == 1:
+            # 蓄力5秒后造成攻击力200%法术伤害
+            if self.charging_counter >= 5 or not self.locked_target.is_alive:
+                self.stage = 2
+                self.move_speed = self.original_move_speed
+                if self.locked_target.is_alive:
+                    self.attack_speed += 100
+                else:
+                    self.stage = 0
+                self.skill_counter = 0
+                self.charging_counter = 0
+                self.rage_counter = 0
+                self.attack_time_counter = 0
+                debug_print(f"{self.name}{self.id} 退出蓄力")
+
+                if self.locked_target.is_alive:
+                    damage = self.calculate_damage(self.locked_target, self.get_attack_power() * 2)
+                    self.on_attack(self.locked_target, damage)
+                    if self.apply_damage_to_target(self.locked_target, damage):
+                        self.locked_target.on_hit(self, damage)
     
     def attack(self, target, gameTime):
         if self.stage == 1:
-            # 蓄力5秒后造成攻击力200%法术伤害
-            if self.charging_counter >= 5:
-                self.stage = 2
-                self.move_speed = self.original_move_speed
-                self.attack_speed += 100
-                self.charging_counter = 0
-                self.rage_counter = 0
-
-                damage = self.calculate_damage(target, self.get_attack_power() * 2)
-                self.on_attack(target, damage)
-                if self.apply_damage_to_target(target, damage):
-                    target.on_hit(self, damage)
-                self.attack_time_counter = 0
             return
         else:
             super().attack(target, gameTime)

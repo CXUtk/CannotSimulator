@@ -5,9 +5,9 @@ import time
 import numpy as np
 from enum import Enum
 
-from monsters import MonsterFactory
-from utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType, Faction
-from zone import PoisonZone
+from .monsters import MonsterFactory
+from .utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType, Faction
+from .zone import PoisonZone
 
 # 场景参数
 MAP_SIZE = np.array([15, 9])  # 场景宽度（单位：格）

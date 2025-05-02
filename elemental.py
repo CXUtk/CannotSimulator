@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from utils import ElementType, debug_print, lerp
+from .utils import ElementType, debug_print, lerp
 
 
 class ElementAccumulator:
