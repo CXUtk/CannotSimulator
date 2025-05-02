@@ -111,14 +111,16 @@ def main():
     # with open("scene.json", encoding='utf-8') as f:
     #     scene_config = json.load(f)
 
-    # 使用示例
+    # 使用示例，直接修改这里的csv文件就可以跑模拟
     battle_data = process_battle_data("arknights-new.csv")
 
     
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-        #scene_config = {"left": {"萨克斯": 4, "炮god": 3}, "right": {"绵羊": 10, "高普尼克": 2}, "result": "left"}
+        scene_config = { "left": { "Vvan": 5 }, "right": { "衣架": 13 }, "result": "right" }
+
+
 
     #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 
@@ -133,7 +135,7 @@ def main():
         
         left_win = False
         # 开始战斗
-        if battlefield.run_battle(visualize=False) == Faction.LEFT:
+        if battlefield.run_battle(visualize=True) == Faction.LEFT:
             left_win = True
         
         if (left_win and scene_config["result"] == "left") or (not left_win and scene_config["result"] == "right"):
@@ -146,7 +148,9 @@ def main():
 
         matches += 1
         print(f"当前胜率：{win} / {matches}")
-        #break
+        break
+
+
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
     # profiler.enable()

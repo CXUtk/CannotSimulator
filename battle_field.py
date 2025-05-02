@@ -160,7 +160,7 @@ class Battlefield:
             if zone.should_clear(VIRTUAL_TIME_DELTA):
                 continue
             for m in self.monsters:
-                if zone.contains(m.position):
+                if zone.contains(m):
                     zone.apply_effect(m)
             new_zone.append(zone)
         self.effect_zones = new_zone

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
-DEBUG = False
+DEBUG = True
 
 def debug_print(msg):
     if DEBUG:

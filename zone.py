@@ -32,7 +32,7 @@ class EffectZone:
         # 具体效果由子类实现，默认不清除
         return False
 
-    def contains(self, position) -> bool:
+    def contains(self, target) -> bool:
         """判断点是否在区域内"""
         # 具体效果由子类实现
         raise NotImplementedError
@@ -58,20 +58,21 @@ class PoisonZone(EffectZone):
             source=self
         ))
 
-    def contains(self, position) -> bool:
+    def contains(self, target) -> bool:
         """判断点是否在区域内"""
         if self.battle_field.danger_zone_size() > 0:
             size = self.battle_field.danger_zone_size()
-            if (position[0] < size + 1 or position[0] > self.battle_field.map_size[0] - size - 1)\
-                        or (position[1] < size or position[1] > self.battle_field.map_size[1] - size):
+            if (target.position[0] < size + 1 or target.position[0] > self.battle_field.map_size[0] - size - 1)\
+                        or (target.position[1] < size or target.position[1] > self.battle_field.map_size[1] - size):
                 return True
         return False
         
 class WineZone(EffectZone):
-    def __init__(self, position, battle_field, duration):
+    def __init__(self, position, battle_field, duration, faction):
         super().__init__(ZoneType.WINE, position, battle_field)
         self.duration = duration
-        self.radius = 2
+        self.radius = 2.5
+        self.faction = faction
     
     def should_clear(self, delta_time) -> bool:
         """场地效果清除逻辑"""
@@ -89,6 +90,6 @@ class WineZone(EffectZone):
             source=self
         ))
 
-    def contains(self, position) -> bool:
+    def contains(self, target) -> bool:
         """判断点是否在区域内"""
-        return np.linalg.norm(position - self.position) <= self.radius
+        return np.linalg.norm(target.position - self.position) <= self.radius and target.faction == self.faction
