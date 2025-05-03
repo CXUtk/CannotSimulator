@@ -106,14 +106,14 @@ def process_battle_data(csv_path):
 def main():
     """主函数"""
     # 加载怪物数据
-    with open("monsters.json", encoding='utf-8') as f:
+    with open("arknight/monsters.json", encoding='utf-8') as f:
         monster_data = json.load(f)["monsters"]
     
     # with open("scene.json", encoding='utf-8') as f:
     #     scene_config = json.load(f)
 
     # 使用示例，直接修改这里的csv文件就可以跑模拟
-    battle_data = process_battle_data("arknights-new.csv")
+    battle_data = process_battle_data("arknight/arknights-new.csv")
 
     VISUALIZATION_MODE = True
     DEBUG = VISUALIZATION_MODE
@@ -122,9 +122,7 @@ def main():
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-        scene_config = { "left": { "宿主流浪者": 6, "小锤": 0, "光剑":0 }, "right": { "鳄鱼": 10, "1750哥": 0, "炮god": 0 }, "result": "right" }
-
-
+        scene_config = { "left": { "萨卡兹大剑手": 10, "雪球": 3, "酒桶":0 }, "right": {"高能源石虫": 15, "污染躯壳": 13, "高普尼克": 0 }, "result": "left" }
 
         #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 

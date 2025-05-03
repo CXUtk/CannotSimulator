@@ -15,6 +15,7 @@ SPAWN_AREA = 2  # 阵营出生区域宽度
 
 
 from collections import defaultdict
+from .projectiles import ProjectileManager
 
 class SpatialHash:
     def __init__(self, cell_size=0.2):
@@ -84,7 +85,8 @@ class Battlefield:
         self.dead_count = {Faction.LEFT: 0, Faction.RIGHT: 0}
 
         self.effect_zones.append(PoisonZone(self))
-
+        self.projectiles_manager = ProjectileManager(self)
+        self.alive_count = {}
 
     def append_monster(self, monster):
         """添加一个怪物到战场"""
@@ -106,6 +108,7 @@ class Battlefield:
         """二维战场初始化"""
         # 左阵营生成在左上区域
         for (name, count) in left_army.items():
+            self.alive_count[name] = count
             data = next((m for m in monster_data if m["名字"] == name), None)
             if data is None:
                 return False
@@ -120,6 +123,7 @@ class Battlefield:
         
         # 右阵营生成在右下区域
         for (name, count) in right_army.items():
+            self.alive_count[name] = count
             data = next((m for m in monster_data if m["名字"] == name), None)
             if data is None:
                 return False
@@ -131,6 +135,7 @@ class Battlefield:
                 self.append_monster(
                     MonsterFactory.create_monster(data, Faction.RIGHT, pos, self)
                 )
+
         
         return True
 
@@ -175,7 +180,7 @@ class Battlefield:
             self.round += 1
 
             self.check_zone()
-
+            self.projectiles_manager.update_all(VIRTUAL_TIME_DELTA)
             # 更新所有单位
             for m in self.monsters:
                 m.update(VIRTUAL_TIME_DELTA)
