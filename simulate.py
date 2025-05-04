@@ -8,7 +8,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from .battle_field import Battlefield, Faction
-from .utils import DEBUG
+
+from .utils import VISUALIZATION_MODE
 
 # ID与怪物名称映射表 
 MONSTER_MAPPING = {
@@ -113,16 +114,15 @@ def main():
     #     scene_config = json.load(f)
 
     # 使用示例，直接修改这里的csv文件就可以跑模拟
-    battle_data = process_battle_data("arknight/arknights-new.csv")
-
-    VISUALIZATION_MODE = True
-    DEBUG = VISUALIZATION_MODE
+    battle_data = process_battle_data("arknight/arknights53.csv")
 
     
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
-        scene_config = { "left": { "萨卡兹大剑手": 10, "雪球": 3, "酒桶":0 }, "right": {"高能源石虫": 15, "污染躯壳": 13, "高普尼克": 0 }, "result": "left" }
+        if VISUALIZATION_MODE:
+            scene_config = {"left": {"高塔术师": 3}, "right": {"机鳄": 7}, "result": "left"}
+
 
         #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 
@@ -150,9 +150,17 @@ def main():
 
         matches += 1
         print(f"当前胜率：{win} / {matches}")
-        break
+        if VISUALIZATION_MODE:
+            break
 
 
 if __name__ == "__main__":
+    # import cProfile
+    # import pstats
+
+    # profiler = cProfile.Profile()
+    # profiler.enable()
     main()
-   
+    # profiler.disable()
+    # stats = pstats.Stats(profiler)
+    # stats.sort_stats('tottime').print_stats(25)

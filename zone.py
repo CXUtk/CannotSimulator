@@ -62,8 +62,8 @@ class PoisonZone(EffectZone):
         """判断点是否在区域内"""
         if self.battle_field.danger_zone_size() > 0:
             size = self.battle_field.danger_zone_size()
-            if (target.position[0] < size + 1 or target.position[0] > self.battle_field.map_size[0] - size - 1)\
-                        or (target.position[1] < size or target.position[1] > self.battle_field.map_size[1] - size):
+            if (target.position.x < size + 1 or target.position.x > self.battle_field.map_size[0] - size - 1)\
+                        or (target.position.y < size or target.position.y > self.battle_field.map_size[1] - size):
                 return True
         return False
         
@@ -92,4 +92,4 @@ class WineZone(EffectZone):
 
     def contains(self, target) -> bool:
         """判断点是否在区域内"""
-        return np.linalg.norm(target.position - self.position) <= self.radius and target.faction == self.faction
+        return (target.position - self.position).magnitude <= self.radius and target.faction == self.faction

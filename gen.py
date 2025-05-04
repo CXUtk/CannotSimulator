@@ -1,8 +1,20 @@
-import json
+import timeit
+import math
+import numpy as np
 
-with open("monsters.json", encoding='utf-8') as f:
-        monster_data = json.load(f)["monsters"]
+x, y = 3.0, 4.0  # 测试数据
+vec = np.array([3.0, 4.0])
 
-for monster in monster_data:
-    s = ('\"name\":{}, \"count\":0'.format(f'"{monster["名字"]}"'))
-    print('{' + s + '},')
+def method_hypot():
+    return math.hypot(x, y)
+
+def method_sqrt():
+    return math.sqrt(x*x + y*y)
+
+def method_numpy():
+    return np.linalg.norm(vec)
+
+# 测试结果（100万次调用）
+print("math.hypot:      ", timeit.timeit(method_hypot, number=1_000_000))
+print("math.sqrt:       ", timeit.timeit(method_sqrt, number=1_000_000))
+print("numpy.linalg.norm:", timeit.timeit(method_numpy, number=1_000_000))

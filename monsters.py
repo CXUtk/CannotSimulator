@@ -9,6 +9,8 @@ import numpy as np
 
 from typing import TYPE_CHECKING
 
+from .vector2d import FastVector
+
 from .projectiles import AOEType, AOE炸弹
 
 if TYPE_CHECKING:
@@ -19,15 +21,6 @@ from .utils import BuffEffect, BuffType, DamageType, calculate_normal_dmg, debug
 from .zone import WineZone
 
 
-    
-def manhatton_distance(pos1, pos2):
-    a_x = int(pos1[0])
-    a_y = int(pos1[1])
-
-    b_x = int(pos2[0])
-    b_y = int(pos2[1])
-    return abs(a_x - b_x) + abs(a_y - b_y)
-
 class TargetSelector:
     @staticmethod
     def select_targets(attacker, battlefield, need_in_range=False, max_targets=2, reverse=False):
@@ -36,17 +29,24 @@ class TargetSelector:
         优先级: 攻击范围内最高嘲讽等级 > 同等级最近目标 > 全局最近目标
         """
         # 获取所有有效敌人
-        enemies : list[Monster] = [m for m in battlefield.monsters 
-                   if m.can_be_target() 
-                   and m.faction != attacker.faction]
-        
+        if need_in_range:
+            targets = battlefield.query_monster(attacker.position, attacker.attack_range)
+            enemies : list[Monster] =  [m for m in targets
+                    if m.can_be_target() 
+                    and m.faction != attacker.faction]
+        else:
+            enemies : list[Monster] =  [m for m in battlefield.alive_monsters
+                    if m.can_be_target() 
+                    and m.faction != attacker.faction]
+        # battlefield.query_monster(attacker.position, attacker.attack_range if need_in_range else 9999)
+        # enemies =
         if not enemies:
             return []
         
         # 计算所有敌人属性
         enemy_info = []
         for enemy in enemies:
-            dist = np.linalg.norm(enemy.position - attacker.position)
+            dist = (enemy.position - attacker.position).magnitude
             in_range = dist <= attacker.attack_range
 
             if not need_in_range or (need_in_range and in_range):
@@ -85,7 +85,7 @@ class TargetSelector:
         # 计算所有敌人属性
         enemy_info = []
         for enemy in enemies:
-            dist = np.linalg.norm(enemy.position - attacker.position)
+            dist = (enemy.position - attacker.position).magnitude
             in_range = dist <= attacker.attack_range
 
             if not need_in_range or (need_in_range and in_range):
@@ -247,7 +247,7 @@ class Monster:
     def __init__(self, data, faction, position, battlefield):
         self.name = data["名字"]
         self.faction = faction
-        self.position = position
+
         self.attack_power = data["攻击力"]["数值"]
         self.health = data["生命值"]["数值"]
         self.max_health = self.health
@@ -265,6 +265,7 @@ class Monster:
         self.aggro = 0
         
         # 战斗状态
+        self.position : FastVector = position
         self.target = None
         self.attack_time_counter = 0
         self.is_alive = True
@@ -280,6 +281,7 @@ class Monster:
         self.immunity:set[BuffType] = set()
         self.can_target = True
 
+    # 如果活着且不处于不可选取状态
     def can_be_target(self):
         return self.is_alive and self.can_target
 
@@ -292,7 +294,6 @@ class Monster:
         """真正死亡时触发的逻辑"""
         debug_print(f"{self.name}{self.id} 已死亡！")
         self.battlefield.dead_count[self.faction] += 1
-        self.battlefield.alive_count[self.name] -= 1
 
         # for (name, count) in self.battlefield.alive_count.items():
         #     debug_print(f"{name}的数量为{count}")
@@ -321,7 +322,7 @@ class Monster:
             # 向目标移动
             direction = self.target.position - self.position
 
-            if np.linalg.norm(direction) <= self.attack_range:
+            if direction.magnitude <= self.attack_range:
                 # 已经在攻击范围内，停止移动
                 self.enemy_in_range = True
                 return
@@ -330,16 +331,16 @@ class Monster:
         
 
         # 标准化移动向量并应用速度
-        norm_direction = direction / np.linalg.norm(direction) if np.any(direction) else direction
+        norm_direction = direction / direction.magnitude
         self.position += norm_direction * self.move_speed * delta_time
 
-        RADIUS = 0.1
+        RADIUS = self.battlefield.HIT_BOX_RADIUS
         # 碰撞检测
-        for m in self.battlefield.monsters:
+        for m in self.battlefield.query_monster(self.position, RADIUS):
             if not m.can_be_target() or m == self or m.faction != self.faction:
                 continue
             dir = m.position - self.position
-            dist = np.maximum(np.linalg.norm(dir), 0.0001)
+            dist = np.maximum(dir.magnitude, 0.0001)
             dir /= dist
             depth = RADIUS * 2 - dist
             if m != self and dist < RADIUS * 2:
@@ -347,7 +348,14 @@ class Monster:
                 self.position -= dir * (depth + 0.01)
         
         # 限制在场景范围内
-        self.position = np.clip(self.position, [0, 0], self.battlefield.map_size)
+        if self.position.x < 0:
+            self.position.x = 0
+        if self.position.x > self.battlefield.map_size[0]:
+            self.position.x = self.battlefield.map_size[0]
+        if self.position.y < 0:
+            self.position.y = 0
+        if self.position.y > self.battlefield.map_size[1]:
+            self.position.y = self.battlefield.map_size[1]
 
     def can_attack(self, delta_time):
         return self.attack_time_counter >= self.attack_interval
@@ -378,10 +386,16 @@ class Monster:
         self.increase_skill_cd(delta_time)
         # 继续移动
         self.move_toward_enemy(delta_time)
+        self.battlefield.hash_grid.insert(self.position, self.id)
         
         # 优先攻击已有目标
         if self.attack_range <= 0.8:
-            self.target = self.find_target()
+            targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
+            if len(targets) > 0:
+                self.target = targets[0]
+
+        # if target_ and np.linalg.norm(self.target.position - self.position) > self.attack_range and np.linalg.norm(target_.position - self.position) <= self.attack_range:
+        #     self.target = target_
         if self.target and self.target.is_alive:
             if self.can_attack(delta_time):
                 self.attack(self.target, delta_time)
@@ -399,7 +413,7 @@ class Monster:
     # 攻击相关方法
     def attack(self, target, gameTime):
         direction = target.position - self.position
-        distance = np.linalg.norm(direction)
+        distance = direction.magnitude
 
         if distance <= self.attack_range:
             damage = self.calculate_damage(target, self.get_attack_power())
@@ -464,13 +478,15 @@ class HighEnergySlug(Monster):
         # 实现自爆逻辑
         explosion_radius = 1.25
         debug_print(f"{self.name} 即将自爆！")
-        for m in self.battlefield.monsters:
-            if m.faction != self.faction and m.is_alive:
-                distance = np.linalg.norm(m.position - self.position)
-                if distance <= explosion_radius:
-                    dmg = self.calculate_damage(m, self.get_attack_power() * 4)
-                    m.take_damage(dmg, self.attack_type)
-                    debug_print(f"{m.name}{m.id} 受到{dmg}点爆炸伤害")
+
+        self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹(0.2, self.get_attack_power() * 4, DamageType.PHYSICAL, self, self.position, name="源石虫爆炸", aoeType=AOEType.Circle, radius=1.25))
+        # for m in self.battlefield.monsters:
+        #     if m.faction != self.faction and m.is_alive:
+        #         distance = np.linalg.norm(m.position - self.position)
+        #         if distance <= explosion_radius:
+        #             dmg = self.calculate_damage(m, self.get_attack_power() * 4)
+        #             m.take_damage(dmg, self.attack_type)
+        #             debug_print(f"{m.name}{m.id} 受到{dmg}点爆炸伤害")
         super().on_death()
 
 class 巧克力虫(Monster):
@@ -489,7 +505,7 @@ class 冰爆虫(Monster):
         debug_print(f"{self.name} 即将自爆！")
         for m in self.battlefield.monsters:
             if m != self and m.faction != self.faction and m.is_alive:
-                distance = np.linalg.norm(m.position - self.position)
+                distance = (m.position - self.position).magnitude
                 if distance <= explosion_radius:
                     dmg = self.calculate_damage(m, self.get_attack_power() * 2)
                     m.take_damage(dmg, self.attack_type)
@@ -547,10 +563,10 @@ class 大喷蛛(Monster):
 
     def spawn_small(self):
         debug_print(f"{self.name} 释放小喷蛛")
-        self.battlefield.append_monster_name("小喷蛛", self.faction, self.position + np.array([
+        self.battlefield.append_monster_name("小喷蛛", self.faction, self.position + FastVector(
                         random.uniform(0, 1) * 0.001,
                         random.uniform(0, 1) * 0.001
-                    ]))
+                    ))
         
 class 鳄鱼(Monster):
     """鳄鱼"""
@@ -669,11 +685,10 @@ class 高塔术师(Monster):
         self.attack_time_counter = 0
 
     def get_aoe_targets(self, target):
-        x, y = self.battlefield.get_grid(target)
         aoe_targets = [m for m in self.battlefield.monsters 
                  if m.is_alive and m.faction != self.faction
-                 and abs(self.battlefield.get_grid(m)[0] - x) <= 1 
-                 and abs(self.battlefield.get_grid(m)[1] - y) <= 1]
+                 and abs(m.position.x - target.position.x) <= 1 
+                 and abs(m.position.y - target.position.y) <= 1]
         return aoe_targets
 
 class 冰原术师(Monster):
@@ -758,11 +773,11 @@ class 庞贝(Monster):
             debug_print(f"{self.name} 进入狂暴模式")
             
         targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=1)
-        if len(targets) > 0 and np.linalg.norm(targets[0].position - self.position) < 0.8:
+        if len(targets) > 0 and (targets[0].position - self.position).magnitude < 0.8:
             self.ring_attack_counter += delta_time
             if self.ring_attack_counter >= 10.0:
                 targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=9999)
-                targets = [t for t in targets if np.linalg.norm(t.position - self.position) < 1.4]
+                targets = [t for t in targets if (t.position - self.position).magnitude < 1.4]
                 for tar in targets:
                     dmg = self.calculate_damage(tar, 1000)
                     if self.apply_damage_to_target(tar, dmg):
@@ -882,7 +897,7 @@ class 杰斯顿(Monster):
                 return
         else:
             direction = target.position - self.position
-            distance = np.linalg.norm(direction)
+            distance = direction.magnitude
             # 二连击
             if distance <= self.attack_range:
                 self.on_attack(self.target, 0)
@@ -963,7 +978,7 @@ class 镜神(Monster):
         # 如果处于默认状态，释放技能
         if self.stage == 0 and self.skill_counter >= 35:
             direction = self.target.position - self.position
-            distance = np.linalg.norm(direction)
+            distance = direction.magnitude
 
             if distance <= self.attack_range:
                 self.locked_target = self.target
@@ -981,6 +996,7 @@ class 镜神(Monster):
                 self.charging_counter = 0
                 self.rage_counter = 0
                 self.attack_time_counter = 0
+                self.attack_speed += 100
                 debug_print(f"{self.name}{self.id} 退出蓄力")
 
                 if self.locked_target.can_be_target():
@@ -1017,7 +1033,7 @@ class Vvan(Monster):
         if self.stage == 0 and self.skill_counter >= 25:
             if self.target and self.target.can_be_target():
                 direction = self.target.position - self.position
-                distance = np.linalg.norm(direction)
+                distance = direction.magnitude
                 if distance <= self.attack_range:
                     self.stage = 1
                     self.move_speed = 0
@@ -1036,7 +1052,7 @@ class Vvan(Monster):
 
                 for m in self.battlefield.monsters:
                     if m.faction != self.faction and m.can_be_target():
-                        distance = np.linalg.norm(self.target_pos - m.position) #manhatton_distance(self.target_pos, m.position)
+                        distance = (self.target_pos - m.position).magnitude #manhatton_distance(self.target_pos, m.position)
                         if distance <= 3.2:
                             dmg = self.calculate_damage(m, self.get_attack_power() * 2.5)
                             if self.apply_damage_to_target(m, dmg):
@@ -1097,9 +1113,8 @@ class 萨克斯(Monster):
 
     def get_hit_enemies(self):
         # 使用整数坐标进行快速分类
-        self_x = int(self.position[0])
-        self_y = int(self.position[1])
-        
+        self_x = int(self.position.x)
+        self_y = int(self.position.y)
         
         smallest_up = 100
         smallest_up_target = None
@@ -1118,25 +1133,25 @@ class 萨克斯(Monster):
                 continue
             
             # 转换为整数坐标（优化距离计算效率）
-            x = int(m.position[0])
-            y = int(m.position[1])
+            x = int(m.position.x)
+            y = int(m.position.y)
             
             # 列坐标匹配（同一垂直方向）
             if x == self_x:
-                if m.position[1] > self.position[1] and m.position[1] - self.position[1] < smallest_up:
-                    smallest_up = m.position[1] - self.position[1]
+                if m.position.y > self.position.y and m.position.y - self.position.y < smallest_up:
+                    smallest_up = m.position.y - self.position.y
                     smallest_up_target = m
-                if m.position[1] < self.position[1] and self.position[1] - m.position[1] < smallest_down:
-                    smallest_down = self.position[1] - m.position[1]
+                if m.position.y < self.position.y and self.position.y - m.position.y < smallest_down:
+                    smallest_down = self.position.y - m.position.y
                     smallest_down_target = m
             
             # 行坐标匹配（同一水平方向）
             if y == self_y:
-                if m.position[0] > self.position[0] and m.position[0] - self.position[0] < smallest_right:
-                    smallest_right = m.position[0] - self.position[0]
+                if m.position.x > self.position.x and m.position.x - self.position.x < smallest_right:
+                    smallest_right = m.position.x - self.position.x
                     smallest_right_target = m
-                if m.position[0] < self.position[0] and self.position[0] -m.position[0] < smallest_left:
-                    smallest_left = self.position[0] - m.position[0]
+                if m.position.x < self.position.x and self.position.x -m.position.x < smallest_left:
+                    smallest_left = self.position.x - m.position.x
                     smallest_left_target = m
         
         targets = []
@@ -1219,7 +1234,7 @@ class 萨卡兹链术师(Monster):
         
 
     def _find_candidates(self, 
-                        origin: tuple, 
+                        origin: FastVector, 
                         enemies: List['Monster'], 
                         visited: set) -> List[tuple]:
         """
@@ -1230,7 +1245,6 @@ class 萨卡兹链术师(Monster):
         :return: 候选列表 (目标, 距离)
         """
         candidates = []
-        ox, oy = origin
         
         for enemy in enemies:
             # 排除已攻击目标
@@ -1238,9 +1252,8 @@ class 萨卡兹链术师(Monster):
                 continue
             
             # 计算欧氏距离
-            dx = enemy.position[0] - ox
-            dy = enemy.position[1] - oy
-            distance = math.hypot(dx, dy)
+            d = enemy.position - origin
+            distance = d.magnitude
             
             if distance <= 1.6:
                 candidates.append( (enemy, distance) )
@@ -1249,7 +1262,7 @@ class 萨卡兹链术师(Monster):
 
     def attack(self, target, gameTime):
         direction = target.position - self.position
-        distance = np.linalg.norm(direction)
+        distance = direction.magnitude
             
         if distance <= self.attack_range:
             taragets = self.chain_attack(target)
@@ -1266,10 +1279,10 @@ class 萨卡兹链术师(Monster):
 
     def on_death(self):
         debug_print(f"{self.name} 变成大君之赐")
-        self.battlefield.append_monster_name("大君之赐", self.faction, self.position + np.array([
+        self.battlefield.append_monster_name("大君之赐", self.faction, self.position + FastVector(
                         random.uniform(-1, 1) * 0.001,
                         random.uniform(-1, 1) * 0.001
-                    ]))
+                    ))
 
 class 高普尼克(Monster):
     """高普尼克"""
@@ -1287,7 +1300,7 @@ class 狂躁珊瑚(Monster):
     def can_attack(self, delta_time):
         ret = super().can_attack(delta_time)
         direction = self.target.position - self.position
-        distance = np.linalg.norm(direction)
+        distance = direction.magnitude
 
         if distance <= self.attack_range:
             self.decay_timer += delta_time
@@ -1303,7 +1316,7 @@ class 狂躁珊瑚(Monster):
 
     def attack(self, target, delta_time):
         direction = target.position - self.position
-        distance = np.linalg.norm(direction)
+        distance = direction.magnitude
 
         if distance <= self.attack_range:
             # 如果是近战
@@ -1343,7 +1356,7 @@ class 炮god(Monster):
         if len(targets) == 0:
             return
         
-        self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹(0.25, self.get_attack_power(), self.attack_type, self, targets[0].position, name="火箭弹", aoeType=AOEType.Grid8))
+        self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹(0.2, self.get_attack_power(), self.attack_type, self, targets[0].position, name="火箭弹", aoeType=AOEType.Grid8))
 
         self.attack_time_counter = 0
         debug_print(f"{self.name}{self.id} 开炮")
@@ -1451,7 +1464,7 @@ class 凋零萨卡兹(Monster):
     def get_aoe_targets(self, target):
         aoe_targets = [m for m in self.battlefield.monsters 
             if m.is_alive and m.faction != self.faction
-            and np.maximum(abs(m.position[0] - target.position[0]), abs(m.position[1] - target.position[1])) <= 1]
+            and np.maximum(abs(m.position.x - target.position.x), abs(m.position.y - target.position.y)) <= 1]
         return aoe_targets
     
     def attack(self, target, gameTime):
@@ -1459,7 +1472,7 @@ class 凋零萨卡兹(Monster):
             return
         else:
             direction = target.position - self.position
-            distance = np.linalg.norm(direction)
+            distance = direction.magnitude
 
             if distance <= self.attack_range:
                 damage = self.calculate_damage(target, self.get_attack_power())
@@ -1562,7 +1575,7 @@ class 酒桶(Monster):
             super().attack(target, gameTime)
         else:
             direction = target.position - self.position
-            distance = np.linalg.norm(direction)
+            distance = direction.magnitude
             if distance <= self.attack_range:
                 damage = self.calculate_damage(target, self.get_attack_power() * 2.8)
                 self.on_attack(target, damage)
@@ -1772,13 +1785,13 @@ class 自在(Monster):
     def get_aoe_targets(self, target):
         aoe_targets = [m for m in self.battlefield.monsters 
             if m.is_alive and m.faction != self.faction
-            and abs(m.position[0] - target.position[0]) <= 2 and abs(m.position[1] - target.position[1]) <= 2]
+            and abs(m.position.x - target.position.x) <= 2 and abs(m.position.y - target.position.y) <= 2]
         return aoe_targets
     
     def get_aoe_targets_skill2(self):
         aoe_targets = [m for m in self.battlefield.monsters 
             if m.is_alive and m.faction != self.faction
-            and np.linalg.norm(m.position - self.position) < 3]
+            and (m.position - self.position).magnitude < 3]
         return aoe_targets
 
     def take_damage(self, damage, attack_type) -> bool:

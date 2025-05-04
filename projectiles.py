@@ -83,14 +83,14 @@ class ProjectileManager:
 class AOEType(Enum):
     Grid4 = "四格"
     Grid8 = "八格"
-    Circle1 = "圆形1",
-    Circle2 = "圆形2"
+    Circle = "圆形"
 
 class AOE炸弹(TimedProjectile):
-    def __init__(self, max_lifetime, damage : float, damageType : DamageType, source : "Monster", target_position, name : str, aoeType : AOEType):
+    def __init__(self, max_lifetime, damage : float, damageType : DamageType, source : "Monster", target_position, name : str, aoeType : AOEType, radius=1):
         super().__init__(max_lifetime, damage, damageType, source, target_position)
         self.name = name
         self.aoe_Type = aoeType
+        self.radius = radius
 
     def apply_damage_to_target(self, m : 'Monster', damage):
         debug_print(f"{self.source.name}{self.source.id} 的{self.name}对 {m.name}{m.id} 造成{damage}点{self.damage_type}伤害")
@@ -108,19 +108,14 @@ class AOE炸弹(TimedProjectile):
         
     def get_aoe_targets(self, target_pos, battle_field: 'Battlefield'):
         if self.aoe_Type == AOEType.Grid8:
-            aoe_targets = [m for m in battle_field.monsters 
+            aoe_targets = [m for m in battle_field.alive_monsters
                     if m.is_alive and m.faction != self.source.faction
-                    and np.maximum(abs(m.position[0] - target_pos[0]), abs(m.position[1] - target_pos[1])) <= 1]
+                    and np.maximum(abs(m.position.x - target_pos.x), abs(m.position.y - target_pos.y)) <= 1]
         elif self.aoe_Type == AOEType.Grid4:
-            aoe_targets = [m for m in battle_field.monsters 
+            aoe_targets = [m for m in battle_field.alive_monsters
                     if m.is_alive and m.faction != self.source.faction
-                    and abs(m.position[0] - target_pos[0]) + abs(m.position[1] - target_pos[1]) <= 1]
-        elif self.aoe_Type == AOEType.Circle1:
-            aoe_targets = [m for m in battle_field.monsters 
-                    if m.is_alive and m.faction != self.source.faction
-                    and np.linalg.norm(m.position - target_pos) <= 1]
-        elif self.aoe_Type == AOEType.Circle2:
-            aoe_targets = [m for m in battle_field.monsters 
-                    if m.is_alive and m.faction != self.source.faction
-                    and np.linalg.norm(m.position - target_pos) <= 2]
+                    and abs(m.position.x - target_pos.x) + abs(m.position.y - target_pos.y) <= 1]
+        elif self.aoe_Type == AOEType.Circle:
+            aoe_targets = [m for m in battle_field.query_monster(target_pos, self.radius) 
+                    if m.is_alive and m.faction != self.source.faction]
         return aoe_targets
