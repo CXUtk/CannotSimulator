@@ -121,9 +121,7 @@ def main():
     matches = 0
     for scene_config in tqdm(battle_data):
         if VISUALIZATION_MODE:
-            scene_config = {"left": {"高塔术师": 3}, "right": {"机鳄": 7}, "result": "left"}
-
-
+            scene_config = {"left": {"高能源石虫": 16}, "right": {"宿主流浪者": 6}, "result": "right"}
         #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 
         # 用户配置
@@ -131,14 +129,17 @@ def main():
         right_army = scene_config["right"]
     
         # 初始化战场
-        battlefield = Battlefield(monster_data)
-        if not battlefield.setup_battle(left_army, right_army, monster_data):
-            continue
-        
-        left_win = False
-        # 开始战斗
-        if battlefield.run_battle(visualize=VISUALIZATION_MODE) == Faction.LEFT:
-            left_win = True
+        leftWins = 0
+        for i in range(3):
+            battlefield = Battlefield(monster_data)
+            if not battlefield.setup_battle(left_army, right_army, monster_data):
+                continue
+            
+            # 开始战斗
+            if battlefield.run_battle(visualize=VISUALIZATION_MODE) == Faction.LEFT:
+                leftWins += 1
+
+        left_win = leftWins >= 2
         
         if (left_win and scene_config["result"] == "left") or (not left_win and scene_config["result"] == "right"):
             win += 1

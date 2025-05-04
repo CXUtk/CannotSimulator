@@ -211,7 +211,7 @@ class StatusSystem:
             debug_print(f"{self.owner.name}{self.owner.id} 进入了毒圈！")
         elif effect.type == BuffType.WINE:
             self.owner.attack_speed += 100
-            self.owner.phys_dodge += 80
+            self.owner.phys_dodge += 50
             debug_print(f"{self.owner.name}{self.owner.id} 进入了酒桶区域！")
         elif effect.type == BuffType.INVINCIBLE2:
             self.owner.invincible = True
@@ -238,7 +238,7 @@ class StatusSystem:
             debug_print(f"{self.owner.name}{self.owner.id} 离开了毒圈！")
         elif effect.type == BuffType.WINE:
             self.owner.attack_speed -= 100
-            self.owner.phys_dodge -= 80
+            self.owner.phys_dodge -= 50
         elif effect.type == BuffType.INVINCIBLE2:
             self.owner.invincible = False
             self.owner.can_target = True
@@ -953,7 +953,7 @@ class 镜神(Monster):
     """山海众司魅人"""
     def on_spawn(self):
         # 技力
-        self.skill_counter = 25
+        self.skill_counter = 27
         self.stage = 0
         self.charging_counter = 0
         self.rage_counter = 0
@@ -1080,16 +1080,13 @@ class 萨克斯(Monster):
         elif self.stage == 1:
             self.charging_counter += delta_time
         
-        super().increase_skill_cd(delta_time)
-
-    def on_attack(self, target : Monster, damage):
         # 如果处于默认状态，释放技能
         if self.stage == 0 and self.skill_counter >= 20:
             self.stage = 1
             self.move_speed = 0
             self.charging_counter = 0
-            self.target_pos = target.position
             debug_print(f"{self.name}{self.id} 开始蓄力")
+        super().increase_skill_cd(delta_time)
     
     def attack(self, target, gameTime):
         if self.stage == 1:
@@ -1113,8 +1110,8 @@ class 萨克斯(Monster):
 
     def get_hit_enemies(self):
         # 使用整数坐标进行快速分类
-        self_x = int(self.position.x)
-        self_y = int(self.position.y)
+        self_x = self.position.x
+        self_y = self.position.y
         
         smallest_up = 100
         smallest_up_target = None
@@ -1133,11 +1130,11 @@ class 萨克斯(Monster):
                 continue
             
             # 转换为整数坐标（优化距离计算效率）
-            x = int(m.position.x)
-            y = int(m.position.y)
+            x = m.position.x
+            y = m.position.y
             
             # 列坐标匹配（同一垂直方向）
-            if x == self_x:
+            if abs(x - self_x) <= 0.5:
                 if m.position.y > self.position.y and m.position.y - self.position.y < smallest_up:
                     smallest_up = m.position.y - self.position.y
                     smallest_up_target = m
@@ -1146,7 +1143,7 @@ class 萨克斯(Monster):
                     smallest_down_target = m
             
             # 行坐标匹配（同一水平方向）
-            if y == self_y:
+            if abs(y - self_y) <= 0.5:
                 if m.position.x > self.position.x and m.position.x - self.position.x < smallest_right:
                     smallest_right = m.position.x - self.position.x
                     smallest_right_target = m

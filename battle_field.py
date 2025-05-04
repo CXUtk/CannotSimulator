@@ -18,7 +18,7 @@ from .utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType, Faction, SpatialHas
 from .zone import PoisonZone
 
 # 场景参数
-MAP_SIZE = np.array([15, 9])  # 场景宽度（单位：格）
+MAP_SIZE = np.array([17, 9])  # 场景宽度（单位：格）
 SPAWN_AREA = 2  # 阵营出生区域宽度
 
 
@@ -86,7 +86,7 @@ class Battlefield:
                 return False
             for _ in range(count):
                 pos = FastVector(
-                    random.uniform(0, 1),
+                    random.uniform(0, SPAWN_AREA),
                     random.uniform(0, MAP_SIZE[1])
                 )
                 self.append_monster(
@@ -153,8 +153,8 @@ class Battlefield:
                 m.update(VIRTUAL_TIME_DELTA)
             
             # 检查胜利条件
-            winner = self.check_victory()
             self.alive_monsters = [m for m in self.monsters if m.is_alive]
+            winner = self.check_victory()
             if winner:
                 print(f"\nVictory for {winner.name}!")
                 left = len([m for m in self.alive_monsters if m.is_alive and m.faction == Faction.LEFT])
