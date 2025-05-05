@@ -52,7 +52,7 @@ class TargetSelector:
             if not need_in_range or (need_in_range and in_range):
                 enemy_info.append({
                     "enemy": enemy,
-                    "distance": dist,
+                    "distance": -enemy.id if in_range else dist,
                     "aggro": enemy.aggro if in_range else 0 
                 })
         
@@ -382,10 +382,10 @@ class Monster:
         self.status_system.update(delta_time)
         self.update_elemental(delta_time)
 
-        if self.frame_counter % 3 == 0:
-            if self.target is None or not self.target.can_be_target():
-                # 寻找新目标
-                self.target = self.find_target()
+
+        if self.target is None or not self.target.can_be_target():
+            # 寻找新目标
+            self.target = self.find_target()
 
         if self.frozen or self.dizzy or not self.is_alive:
             return
@@ -396,22 +396,15 @@ class Monster:
         self.battlefield.hash_grid.insert(self.position, self.id)
         
         if self.frame_counter % 3 == 0:
-            if self.attack_range <= 0.8:
-                targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
-                if len(targets) > 0:
-                    # 如果范围内有目标，近战总是攻击最近的目标
-                    self.target = targets[0]
-            elif self.target and (self.target.position - self.position).magnitude > self.attack_range:
-                # 对于远程，攻击并锁定最新进入进入范围内的目标
-                targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
-                if len(targets) > 0:
-                    self.target = targets[0]
-
+            targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
+            if len(targets) > 0:
+                self.target = targets[0]
         # if target_ and np.linalg.norm(self.target.position - self.position) > self.attack_range and np.linalg.norm(target_.position - self.position) <= self.attack_range:
         #     self.target = target_
         if self.target and self.target.is_alive:
             if self.can_attack(delta_time):
                 self.attack(self.target, delta_time)
+    
 
     def find_target(self):
         """寻找最近的可攻击目标"""

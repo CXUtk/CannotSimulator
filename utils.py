@@ -63,7 +63,7 @@ class BuffEffect:
     data: dict = field(default_factory=dict)
 
 
-VIRTUAL_TIME_STEP = 60 # 60帧相当于一秒
+VIRTUAL_TIME_STEP = 30 # 60帧相当于一秒
 VIRTUAL_TIME_DELTA = 1.0 / VIRTUAL_TIME_STEP
 
 def calculate_normal_dmg(defense, magic_resist, dmg, damageType: DamageType):

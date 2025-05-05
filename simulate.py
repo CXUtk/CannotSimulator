@@ -54,14 +54,14 @@ def main():
     #     scene_config = json.load(f)
 
     # 使用示例，直接修改这里的csv文件就可以跑模拟
-    battle_data = process_battle_data("arknight/arknights.csv")
+    battle_data = process_battle_data("arknight/65knwd.csv")
 
     
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
         if VISUALIZATION_MODE:
-            scene_config = {"left": {"大喷蛛": 7, "雪球": 0}, "right": {"阿咬": 68, "机鳄": 0}, "result": "right"}
+            scene_config = {"left": {"宿主流浪者": 7, "污染躯壳": 14, "凋零萨卡兹": 5}, "right": {"大喷蛛": 4, "杰斯顿": 1, "衣架": 10}, "result": "right"}
 
 
         #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }

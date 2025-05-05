@@ -42,6 +42,10 @@ class Battlefield:
         self.effect_zones.append(PoisonZone(self))
         self.projectiles_manager = ProjectileManager(self)
 
+        # 开始前把怪物放在待定区域，逐步放入场地
+        self.monster_temporal_area = []
+        self.current_spawn = 0
+
     def query_monster(self, target_position, radius) -> list['Monster']:
         results = []
         if len(self.alive_monsters) < (radius / self.hash_grid.cell_size) ** 2:
@@ -85,13 +89,11 @@ class Battlefield:
                 return False
             for _ in range(count):
                 pos = FastVector(
-                    random.uniform(0, SPAWN_AREA),
+                    random.uniform(0, 0.5),
                     random.uniform(0, MAP_SIZE[1])
                 )
-                self.append_monster(
-                    MonsterFactory.create_monster(data, Faction.LEFT, pos, self)
-                )
-        
+                self.monster_temporal_area.append( MonsterFactory.create_monster(data, Faction.LEFT, pos, self))
+
         # 右阵营生成在右下区域
         for (name, count) in right_army.items():
             data = next((m for m in monster_data if m["名字"] == name), None)
@@ -99,18 +101,20 @@ class Battlefield:
                 return False
             for _ in range(count):
                 pos = FastVector(
-                    random.uniform(MAP_SIZE[0]-SPAWN_AREA, MAP_SIZE[0]),
+                    random.uniform(MAP_SIZE[0]-0.5, MAP_SIZE[0]),
                     random.uniform(0, MAP_SIZE[1])
                 )
-                self.append_monster(
-                    MonsterFactory.create_monster(data, Faction.RIGHT, pos, self)
-                )
+                self.monster_temporal_area.append(MonsterFactory.create_monster(data, Faction.RIGHT, pos, self))
 
         self.alive_monsters = self.monsters
+        self.gameTime = 0
+        self.current_spawn = 0
         return True
 
     def check_victory(self):
         """检查胜利条件"""
+        if self.current_spawn < len(self.monster_temporal_area):
+            return None
         alive_factions = set()
         for m in self.alive_monsters:
             if m.is_alive:
@@ -135,32 +139,41 @@ class Battlefield:
             new_zone.append(zone)
         self.effect_zones = new_zone
 
+    def run_one_frame(self):
+        self.round += 1
+
+        if self.current_spawn < len(self.monster_temporal_area) and self.round % 3 == 0:
+            self.append_monster(self.monster_temporal_area[self.current_spawn])
+            self.current_spawn += 1
+
+        self.check_zone()
+        self.projectiles_manager.update_all(VIRTUAL_TIME_DELTA)
+        # 更新所有单位
+        for m in self.monsters:
+            m.update(VIRTUAL_TIME_DELTA)
+        
+        # 检查胜利条件
+        self.alive_monsters = [m for m in self.monsters if m.is_alive]
+        winner = self.check_victory()
+        if winner:
+            print(f"\nVictory for {winner.name}!")
+            left = len([m for m in self.alive_monsters if m.is_alive and m.faction == Faction.LEFT])
+            print(f"左边存活{left} / 右边存活{len(self.alive_monsters) - left}")
+            return winner
+        
+        self.gameTime += VIRTUAL_TIME_DELTA
+        return None
+    
     def run_battle(self, visualize=False):
         """运行战斗直到决出胜负"""
-
-        self.gameTime = 0
         while True:
             if visualize and self.round % 60 == 0:
                 self.print_battlefield()
-                #time.sleep(1)
-            self.round += 1
-
-            self.check_zone()
-            self.projectiles_manager.update_all(VIRTUAL_TIME_DELTA)
-            # 更新所有单位
-            for m in self.monsters:
-                m.update(VIRTUAL_TIME_DELTA)
+                # time.sleep(1)
             
-            # 检查胜利条件
-            self.alive_monsters = [m for m in self.monsters if m.is_alive]
-            winner = self.check_victory()
-            if winner:
-                print(f"\nVictory for {winner.name}!")
-                left = len([m for m in self.alive_monsters if m.is_alive and m.faction == Faction.LEFT])
-                print(f"左边存活{left} / 右边存活{len(self.alive_monsters) - left}")
-                return winner
-            
-            self.gameTime += VIRTUAL_TIME_DELTA
+            result = self.run_one_frame()
+            if result != None:
+                return result
 
     def danger_zone_size(self):
         if self.gameTime < 60:
