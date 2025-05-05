@@ -304,11 +304,11 @@ class Monster:
     
     def get_skill_bar(self):
         """技力在ui显示的内容"""
-        return 0
+        return self.attack_time_counter
 
     def get_max_skill_bar(self):
         """技力在ui显示的内容，最大技力"""
-        return 1
+        return self.attack_interval
     
     def on_hit(self, attacker, damage):
         """被击中时触发的逻辑"""
@@ -665,6 +665,14 @@ class 拳击囚犯(Monster):
         self.attack_speed -= 50
         self.attack_count = 0
 
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return np.minimum(self.attack_count, 4)
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 4
+    
     def attack(self, target, gameTime):
         direction = target.position - self.position
         distance = direction.magnitude
@@ -723,6 +731,14 @@ class 冰原术师(Monster):
 
     def on_attack(self, target, damage):
         self.attack_count += 1
+
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return self.attack_count % 3
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 3
     
     def apply_damage_to_target(self, target, damage):
         # 如果敌人受到伤害施加buff
@@ -772,6 +788,14 @@ class 庞贝(Monster):
         self.ring_attack_counter = 0
         self.boss = True
 
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return self.ring_attack_counter
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 10
+    
     def attack(self, target, gameTime):
         targets : list[Monster] = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=4)
         if len(targets) == 0:
@@ -873,6 +897,14 @@ class 船长(Monster):
 
     def on_attack(self, target, damage):
         self.attack_count += 1
+
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return self.attack_count % 4
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 4
 
     def apply_damage_to_target(self, target, damage):
         if super().apply_damage_to_target(target, damage):
@@ -993,6 +1025,26 @@ class 镜神(Monster):
         self.rage_counter = 0
         self.original_move_speed = self.move_speed
         self.locked_target = None
+
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        if self.stage == 0:
+            return self.skill_counter
+        elif self.stage == 1:
+            return self.charging_counter
+        elif self.stage == 2:
+            return 20 - self.rage_counter
+        return 0
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        if self.stage == 0:
+            return 35
+        elif self.stage == 1:
+            return 5
+        elif self.stage == 2:
+            return 20
+        return 1
     
     def increase_skill_cd(self, delta_time):
         if self.stage == 0:
@@ -1055,6 +1107,22 @@ class Vvan(Monster):
         self.original_move_speed = self.move_speed
         self.target_pos = None
     
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        if self.stage == 0:
+            return self.skill_counter
+        elif self.stage == 1:
+            return self.charging_counter
+        return 0
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        if self.stage == 0:
+            return 25
+        elif self.stage == 1:
+            return 7
+        return 1
+    
     def increase_skill_cd(self, delta_time):
         if self.stage == 0:
             self.skill_counter += delta_time
@@ -1107,6 +1175,22 @@ class 萨克斯(Monster):
         self.stage = 0
         self.charging_counter = 0
         self.original_move_speed = self.move_speed
+
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        if self.stage == 0:
+            return self.skill_counter
+        elif self.stage == 1:
+            return self.charging_counter
+        return 0
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        if self.stage == 0:
+            return 20
+        elif self.stage == 1:
+            return 5
+        return 1
     
     def increase_skill_cd(self, delta_time):
         if self.stage == 0:
@@ -1290,7 +1374,7 @@ class 萨卡兹链术师(Monster):
                 candidates.append( (enemy, distance) )
         
         return candidates
-
+    
     def attack(self, target, gameTime):
         direction = target.position - self.position
         distance = direction.magnitude
@@ -1541,6 +1625,14 @@ class 衣架(Monster):
         self.attack_speed -= 50
         self.attack_count = 0
 
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return np.minimum(self.attack_count, 4)
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 4
+    
     # 攻击相关方法
     def attack(self, target, gameTime):
         direction = target.position - self.position
