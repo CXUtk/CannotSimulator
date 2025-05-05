@@ -116,6 +116,6 @@ class AOE炸弹(TimedProjectile):
                     if m.is_alive and m.faction != self.source.faction
                     and abs(m.position.x - target_pos.x) + abs(m.position.y - target_pos.y) <= 1]
         elif self.aoe_Type == AOEType.Circle:
-            aoe_targets = [m for m in battle_field.query_monster(target_pos, self.radius) 
+            aoe_targets = [m for m in battle_field.query_monster(target_pos, self.radius - battle_field.HIT_BOX_RADIUS) 
                     if m.is_alive and m.faction != self.source.faction]
         return aoe_targets

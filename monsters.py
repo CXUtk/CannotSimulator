@@ -29,13 +29,13 @@ class TargetSelector:
         优先级: 攻击范围内最高嘲讽等级 > 同等级最近目标 > 全局最近目标
         """
         # 获取所有有效敌人
-        if need_in_range:
-            targets = battlefield.query_monster(attacker.position, attacker.attack_range)
-            enemies : list[Monster] =  [m for m in targets
-                    if m.can_be_target() 
-                    and m.faction != attacker.faction]
-        else:
-            enemies : list[Monster] =  [m for m in battlefield.alive_monsters
+        # if need_in_range:
+        #     targets = battlefield.query_monster(attacker.position, attacker.attack_range)
+        #     enemies : list[Monster] =  [m for m in targets
+        #             if m.can_be_target() 
+        #             and m.faction != attacker.faction]
+        # else:
+        enemies : list[Monster] =  [m for m in battlefield.alive_monsters
                     if m.can_be_target() 
                     and m.faction != attacker.faction]
         # battlefield.query_monster(attacker.position, attacker.attack_range if need_in_range else 9999)
@@ -75,7 +75,7 @@ class TargetSelector:
         优先级: 攻击范围内最高嘲讽等级 > 同等级最近目标 > 全局最近目标
         """
         # 获取所有有效敌人
-        enemies : list[Monster] = [m for m in battlefield.monsters 
+        enemies : list[Monster] = [m for m in battlefield.alive_monsters 
                    if m.can_be_target() 
                    and m.faction != attacker.faction]
         
@@ -277,9 +277,10 @@ class Monster:
         self.element_system = ElementAccumulator(self)
         self.attack_multiplier = 1
         self.phys_dodge = 0
-        self.enemy_in_range = False
+        self.blocked = False
         self.immunity:set[BuffType] = set()
         self.can_target = True
+        self.frame_counter = 0
 
     # 如果活着且不处于不可选取状态
     def can_be_target(self):
@@ -317,14 +318,14 @@ class Monster:
     
     def move_toward_enemy(self, delta_time):
         """根据阵营向对方移动"""
-        self.enemy_in_range = False
+        self.blocked = False
         if self.target and self.target.can_be_target():
             # 向目标移动
             direction = self.target.position - self.position
 
             if direction.magnitude <= self.attack_range:
                 # 已经在攻击范围内，停止移动
-                self.enemy_in_range = True
+                self.blocked = True
                 return
         else:
             return
@@ -335,18 +336,22 @@ class Monster:
         self.position += norm_direction * self.move_speed * delta_time
 
         RADIUS = self.battlefield.HIT_BOX_RADIUS
-        # 碰撞检测
-        for m in self.battlefield.query_monster(self.position, RADIUS):
-            if not m.can_be_target() or m == self or m.faction != self.faction:
-                continue
-            dir = m.position - self.position
-            dist = np.maximum(dir.magnitude, 0.0001)
-            dir /= dist
-            depth = RADIUS * 2 - dist
-            if m != self and dist < RADIUS * 2:
-                # 发生碰撞，挤出
-                self.position -= dir * (depth + 0.01)
-        
+
+        if not self.blocked:
+            # 碰撞检测
+            for m in self.battlefield.query_monster(self.position, RADIUS * 2):
+                if not m.can_be_target() or m == self or m.faction != self.faction:
+                    continue
+                dir = m.position - self.position
+                dist = np.maximum(dir.magnitude, 0.0001)
+                dir /= dist
+
+                radius2 = RADIUS * 0.2 if m.blocked else RADIUS
+                depth = RADIUS + radius2 - dist
+                if dist < RADIUS + radius2:
+                    # 发生碰撞，挤出
+                    self.position -= dir * (depth + 0.01)
+            
         # 限制在场景范围内
         if self.position.x < 0:
             self.position.x = 0
@@ -372,13 +377,15 @@ class Monster:
         if not self.is_alive:
             return
         
+        self.frame_counter += 1
         self.on_extra_update(delta_time)
         self.status_system.update(delta_time)
         self.update_elemental(delta_time)
 
-        if self.target is None or not self.target.can_be_target():
-            # 寻找新目标
-            self.target = self.find_target()
+        if self.frame_counter % 3 == 0:
+            if self.target is None or not self.target.can_be_target():
+                # 寻找新目标
+                self.target = self.find_target()
 
         if self.frozen or self.dizzy or not self.is_alive:
             return
@@ -388,11 +395,17 @@ class Monster:
         self.move_toward_enemy(delta_time)
         self.battlefield.hash_grid.insert(self.position, self.id)
         
-        # 优先攻击已有目标
-        if self.attack_range <= 0.8:
-            targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
-            if len(targets) > 0:
-                self.target = targets[0]
+        if self.frame_counter % 3 == 0:
+            if self.attack_range <= 0.8:
+                targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
+                if len(targets) > 0:
+                    # 如果范围内有目标，近战总是攻击最近的目标
+                    self.target = targets[0]
+            elif self.target and (self.target.position - self.position).magnitude > self.attack_range:
+                # 对于远程，攻击并锁定最新进入进入范围内的目标
+                targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
+                if len(targets) > 0:
+                    self.target = targets[0]
 
         # if target_ and np.linalg.norm(self.target.position - self.position) > self.attack_range and np.linalg.norm(target_.position - self.position) <= self.attack_range:
         #     self.target = target_
@@ -649,12 +662,20 @@ class 拳击囚犯(Monster):
         self.attack_speed -= 50
         self.attack_count = 0
 
-    def on_attack(self, target, damage):
-        self.attack_count += 1
-        if self.attack_count == 4:
-            self.attack_speed += 50
-            self.attack_power += self.attack_power * 0.5
-            debug_print(f"{self.name}{self.id} 已经解放")
+    def attack(self, target, gameTime):
+        direction = target.position - self.position
+        distance = direction.magnitude
+
+        if distance <= self.attack_range:
+            self.attack_count += 1
+            if self.attack_count == 4:
+                self.attack_speed += 50
+                self.attack_power += self.attack_power * 0.5
+                debug_print(f"{self.name}{self.id} 已经解放")
+            damage = self.calculate_damage(target, self.get_attack_power())
+            if self.apply_damage_to_target(target, damage):
+                target.on_hit(self, damage)
+            self.attack_time_counter = 0
 
     def calculate_damage(self, target, damage):
         """计算伤害值"""
@@ -1301,7 +1322,7 @@ class 狂躁珊瑚(Monster):
 
         if distance <= self.attack_range:
             self.decay_timer += delta_time
-            if self.decay_timer > 3.5 and (self.decay_timer - 3.5) % 1 < delta_time:
+            if self.decay_timer > 3.5 and abs(round(self.decay_timer - 3.5) - (self.decay_timer - 3.5)) < 0.001:
                 if self.attack_stack > 0:
                     self.attack_stack -= 2
                     self.attack_multiplier -= 0.3
@@ -1507,13 +1528,22 @@ class 衣架(Monster):
         self.attack_speed -= 50
         self.attack_count = 0
 
-    def on_attack(self, target, damage):
-        self.attack_count += 1
-        if self.attack_count == 4:
-            self.attack_speed += 50
-            self.attack_power += self.attack_power * 0.5
-            self.attack_type = DamageType.MAGIC
-            debug_print(f"{self.name}{self.id} 已经解放")
+    # 攻击相关方法
+    def attack(self, target, gameTime):
+        direction = target.position - self.position
+        distance = direction.magnitude
+
+        if distance <= self.attack_range:
+            self.attack_count += 1
+            if self.attack_count == 4:
+                self.attack_speed += 50
+                self.attack_power += self.attack_power * 0.5
+                self.attack_type = DamageType.MAGIC
+                debug_print(f"{self.name}{self.id} 已经解放")
+            damage = self.calculate_damage(target, self.get_attack_power())
+            if self.apply_damage_to_target(target, damage):
+                target.on_hit(self, damage)
+            self.attack_time_counter = 0
 
 
 class 标枪恐鱼(Monster):

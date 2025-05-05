@@ -29,8 +29,8 @@ class Battlefield:
     def __init__(self, monster_data):
         self.monsters : list[Monster] = []
         self.alive_monsters : list[Monster] = []
-        self.hash_grid : SpatialHash = SpatialHash(self, cell_size=1)
-        self.HIT_BOX_RADIUS = 0.08
+        self.hash_grid : SpatialHash = SpatialHash(self, cell_size=0.5)
+        self.HIT_BOX_RADIUS = 0.1
 
         self.round = 0
         self.map_size = MAP_SIZE
@@ -44,7 +44,6 @@ class Battlefield:
 
     def query_monster(self, target_position, radius) -> list['Monster']:
         results = []
-        radius = self.HIT_BOX_RADIUS + radius
         if len(self.alive_monsters) < (radius / self.hash_grid.cell_size) ** 2:
             for m in self.alive_monsters:
                 if m.is_alive and (m.position - target_position).magnitude <= radius:

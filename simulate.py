@@ -9,68 +9,8 @@ from tqdm import tqdm
 
 from .battle_field import Battlefield, Faction
 
-from .utils import VISUALIZATION_MODE
+from .utils import MONSTER_MAPPING, VISUALIZATION_MODE
 
-# ID与怪物名称映射表 
-MONSTER_MAPPING = {
-    0: "狗pro",
-    1: "酸液源石虫",
-    2: "大盾哥",
-    3: "萨卡兹大剑手",
-    4: "高能源石虫",
-    5: "宿主流浪者",
-    6: "庞贝",
-    7: "1750哥",
-    8: "石头人",
-    9: "鳄鱼",
-    10: "保鲜膜",
-    11: "拳击囚犯",
-    12: "阿咬",
-    13: "大喷蛛",
-    14: "船长",
-    15: "Vvan",
-    16: "冰原术师",
-    17: "萨卡兹链术师",
-    18: "高塔术师",
-    19: "萨克斯",
-    20: "食腐狗",
-    21: "镜神",
-    22: "光剑",
-    23: "绵羊",
-    25: "鼠鼠",
-    24: "雪球",
-    26: "驮兽",
-    27: "杰斯顿",
-    28: "自在",
-    29: "狼神",
-    30: "雷德",
-    31: "海螺",
-    32: "污染躯壳",
-    33: "矿脉守卫",
-    34: "炮god",
-    35: "红刀哥",
-    36: "大斧",
-    37: "护盾哥",
-    38: "冰爆虫",
-    39: "机鳄",
-    40: "沸血骑士",
-    41: "衣架",
-    42: "畸变之矛",
-    43: "榴弹佣兵",
-    44: "标枪恐鱼",
-    45: "雪境精锐",
-    46: "狂躁珊瑚",
-    47: "拳击手",
-    48: "洗地车",
-    49: "凋零萨卡兹",
-    50: "高普尼克",
-    51: "跑男",
-    52: "门",
-    53: "小锤",
-    54: "爱蟹者",
-    55: "酒桶",
-    # 根据实际数据继续扩展...
-}
 
 def process_battle_data(csv_path):
     """
@@ -114,14 +54,16 @@ def main():
     #     scene_config = json.load(f)
 
     # 使用示例，直接修改这里的csv文件就可以跑模拟
-    battle_data = process_battle_data("arknight/arknights53.csv")
+    battle_data = process_battle_data("arknight/arknights.csv")
 
     
     win = 0
     matches = 0
     for scene_config in tqdm(battle_data):
         if VISUALIZATION_MODE:
-            scene_config = {"left": {"高能源石虫": 16}, "right": {"宿主流浪者": 6}, "result": "right"}
+            scene_config = {"left": {"大喷蛛": 7, "雪球": 0}, "right": {"阿咬": 68, "机鳄": 0}, "result": "right"}
+
+
         #{ "left": { "护盾哥": 5, "污染躯壳": 11, "船长": 5 }, "right": { "炮god": 4, "沸血骑士": 4, "雪境精锐": 4}, "result": "left" }
 
         # 用户配置
@@ -138,6 +80,10 @@ def main():
             # 开始战斗
             if battlefield.run_battle(visualize=VISUALIZATION_MODE) == Faction.LEFT:
                 leftWins += 1
+            if leftWins >= 2:
+                break
+            if i >= 1 and leftWins == 0:
+                break
 
         left_win = leftWins >= 2
         
