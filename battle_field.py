@@ -18,7 +18,7 @@ from .utils import VIRTUAL_TIME_DELTA, BuffEffect, BuffType, Faction, SpatialHas
 from .zone import PoisonZone
 
 # 场景参数
-MAP_SIZE = np.array([17, 9])  # 场景宽度（单位：格）
+MAP_SIZE = np.array([13, 9])  # 场景宽度（单位：格）
 SPAWN_AREA = 2  # 阵营出生区域宽度
 
 
@@ -143,7 +143,7 @@ class Battlefield:
     def run_one_frame(self):
         self.round += 1
 
-        if self.current_spawn < len(self.monster_temporal_area) and self.round % 3 == 0:
+        if self.current_spawn < len(self.monster_temporal_area) and self.round % 2 == 0:
             self.append_monster(self.monster_temporal_area[self.current_spawn])
             self.current_spawn += 1
 

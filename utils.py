@@ -191,5 +191,10 @@ MONSTER_MAPPING = {
     53: "小锤",
     54: "爱蟹者",
     55: "酒桶",
+    56: "小喷蛛",
+    57: "大君之赐"
     # 根据实际数据继续扩展...
 }
+
+# 创建反向映射字典（名字到ID）
+REVERSE_MONSTER_MAPPING = {name: id for id, name in MONSTER_MAPPING.items()}

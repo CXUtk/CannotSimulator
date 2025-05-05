@@ -302,6 +302,14 @@ class Monster:
         #     debug_print(f"{name}的数量为{count}")
         
     
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return 0
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 1
+    
     def on_hit(self, attacker, damage):
         """被击中时触发的逻辑"""
         pass
@@ -339,20 +347,20 @@ class Monster:
 
         RADIUS = self.battlefield.HIT_BOX_RADIUS
 
-        if not self.blocked:
-            # 碰撞检测
-            for m in self.battlefield.query_monster(self.position, RADIUS * 2):
-                if not m.can_be_target() or m == self or m.faction != self.faction:
-                    continue
-                dir = m.position - self.position
-                dist = np.maximum(dir.magnitude, 0.0001)
-                dir /= dist
+        # 碰撞检测
+        for m in self.battlefield.query_monster(self.position, RADIUS * 2):
+            if not m.can_be_target() or m == self or m.faction != self.faction:
+                continue
+            dir = m.position - self.position
+            dist = np.maximum(dir.magnitude, 0.0001)
+            dir /= dist
 
-                radius2 = RADIUS * 0.2 if m.blocked else RADIUS
-                depth = RADIUS + radius2 - dist
-                if dist < RADIUS + radius2:
-                    # 发生碰撞，挤出
-                    self.position -= dir * (depth + 0.01)
+            radius2 = RADIUS * 0.2 if m.blocked else RADIUS
+            depth = RADIUS + radius2 - dist
+            if dist < RADIUS + radius2:
+                # 发生碰撞，挤出
+                self.position -= dir * (depth + 0.01) * 0.5
+                m.position += dir * (depth + 0.01) * 0.5
             
         # 限制在场景范围内
         if self.position.x < 0:
@@ -888,7 +896,15 @@ class 杰斯顿(Monster):
         self.attack_count = 0
         self.magic_resist += 50
         self.boss = True
-        
+    
+    def get_skill_bar(self):
+        """技力在ui显示的内容"""
+        return self.attack_count % 4
+
+    def get_max_skill_bar(self):
+        """技力在ui显示的内容，最大技力"""
+        return 4
+
     def on_attack(self, target, damage):
         self.attack_count += 1
 
