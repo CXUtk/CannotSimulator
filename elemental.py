@@ -20,7 +20,8 @@ class ElementAccumulator:
             return  # 爆条期间暂停累积
             
         self.accumulators[element] += value
-        if self.accumulators[element] >= 1000:
+        limits = 2000 if self.owner.boss else 1000
+        if self.accumulators[element] >= limits:
             self.accumulators[element] = 0
             self.active_burst = ElementBurst(element, self.owner)
 

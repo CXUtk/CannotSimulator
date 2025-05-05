@@ -109,6 +109,7 @@ class Battlefield:
         self.alive_monsters = self.monsters
         self.gameTime = 0
         self.current_spawn = 0
+        random.shuffle(self.monster_temporal_area)
         return True
 
     def check_victory(self):
@@ -167,9 +168,9 @@ class Battlefield:
     def run_battle(self, visualize=False):
         """运行战斗直到决出胜负"""
         while True:
-            if visualize and self.round % 60 == 0:
+            if visualize and self.round % 30 == 0:
                 self.print_battlefield()
-                # time.sleep(1)
+                time.sleep(1)
             
             result = self.run_one_frame()
             if result != None:

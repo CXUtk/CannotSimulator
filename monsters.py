@@ -261,8 +261,10 @@ class Monster:
         self.char_icon = data.get("符号", "")
         self.id = -1
         self.attack_speed = 100
+        self.boss = False
         # 嘲讽等级
         self.aggro = 0
+        
         
         # 战斗状态
         self.position : FastVector = position
@@ -760,6 +762,7 @@ class 庞贝(Monster):
     def on_spawn(self):
         self.rage_mode = False
         self.ring_attack_counter = 0
+        self.boss = True
 
     def attack(self, target, gameTime):
         targets : list[Monster] = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=4)
@@ -884,6 +887,7 @@ class 杰斯顿(Monster):
         self.stage = 0
         self.attack_count = 0
         self.magic_resist += 50
+        self.boss = True
         
     def on_attack(self, target, damage):
         self.attack_count += 1
@@ -1455,11 +1459,11 @@ class 凋零萨卡兹(Monster):
                 self.skill_counter = 0
             else:
                 # 法术伤害
-                if self.charging_counter1 > 1:
+                if self.charging_counter1 >= 1:
                     dmg = self.calculate_damage(self.locked_target, self.get_attack_power() * 0.4)
                     if self.apply_damage_to_target(self.locked_target, dmg):
                         self.locked_target.on_hit(self, dmg)
-                        debug_print(f"{self.locked_target.name}{self.locked_target.id} 受到 {self.name}{self.id} 的{dmg}点法术凋零伤害")
+                        debug_print(f"{self.locked_target.name}{self.locked_target.id} 受到 {self.name}{self.id} 的{dmg}点法术伤害")
                         self.charging_counter1 = 0
                 # 蓄力完成的凋亡损伤
                 if self.locked_target.can_be_target() and self.charging_counter2 >= 8.0:
