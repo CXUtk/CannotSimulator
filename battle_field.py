@@ -30,7 +30,7 @@ class Battlefield:
         self.monsters : list[Monster] = []
         self.alive_monsters : list[Monster] = []
         self.hash_grid : SpatialHash = SpatialHash(self, cell_size=0.5)
-        self.HIT_BOX_RADIUS = 0.1
+        self.HIT_BOX_RADIUS = 0.2
 
         self.round = 0
         self.map_size = MAP_SIZE
@@ -43,8 +43,10 @@ class Battlefield:
         self.projectiles_manager = ProjectileManager(self)
 
         # 开始前把怪物放在待定区域，逐步放入场地
-        self.monster_temporal_area = []
-        self.current_spawn = 0
+        self.monster_temporal_area_left = []
+        self.monster_temporal_area_right = []
+        self.current_spawn_left = 0
+        self.current_spawn_right = 0
 
     def query_monster(self, target_position, radius) -> list['Monster']:
         results = []
@@ -92,7 +94,7 @@ class Battlefield:
                     random.uniform(0, 0.5),
                     random.uniform(0, MAP_SIZE[1])
                 )
-                self.monster_temporal_area.append( MonsterFactory.create_monster(data, Faction.LEFT, pos, self))
+                self.monster_temporal_area_left.append( MonsterFactory.create_monster(data, Faction.LEFT, pos, self))
 
         # 右阵营生成在右下区域
         for (name, count) in right_army.items():
@@ -104,17 +106,18 @@ class Battlefield:
                     random.uniform(MAP_SIZE[0]-0.5, MAP_SIZE[0]),
                     random.uniform(0, MAP_SIZE[1])
                 )
-                self.monster_temporal_area.append(MonsterFactory.create_monster(data, Faction.RIGHT, pos, self))
+                self.monster_temporal_area_right.append(MonsterFactory.create_monster(data, Faction.RIGHT, pos, self))
 
         self.alive_monsters = self.monsters
         self.gameTime = 0
         self.current_spawn = 0
-        random.shuffle(self.monster_temporal_area)
+        random.shuffle(self.monster_temporal_area_left)
+        random.shuffle(self.monster_temporal_area_right)
         return True
 
     def check_victory(self):
         """检查胜利条件"""
-        if self.current_spawn < len(self.monster_temporal_area):
+        if self.current_spawn_left < len(self.monster_temporal_area_left) or self.current_spawn_right < len(self.monster_temporal_area_right):
             return None
         alive_factions = set()
         for m in self.alive_monsters:
@@ -143,9 +146,13 @@ class Battlefield:
     def run_one_frame(self):
         self.round += 1
 
-        if self.current_spawn < len(self.monster_temporal_area) and self.round % 2 == 0:
-            self.append_monster(self.monster_temporal_area[self.current_spawn])
-            self.current_spawn += 1
+        if self.current_spawn_left < len(self.monster_temporal_area_left) and self.round % 2 == 0:
+            self.append_monster(self.monster_temporal_area_left[self.current_spawn_left])
+            self.current_spawn_left += 1
+
+        if self.current_spawn_right < len(self.monster_temporal_area_right) and self.round % 2 == 0:
+            self.append_monster(self.monster_temporal_area_right[self.current_spawn_right])
+            self.current_spawn_right += 1
 
         self.check_zone()
         self.projectiles_manager.update_all(VIRTUAL_TIME_DELTA)

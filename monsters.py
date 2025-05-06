@@ -91,7 +91,7 @@ class TargetSelector:
             if not need_in_range or (need_in_range and in_range):
                 enemy_info.append({
                     "enemy": enemy,
-                    "distance": dist,
+                    "distance": -enemy.id if in_range else dist,
                     "aggro": enemy.aggro if in_range else 0,
                     "health_ratio": enemy.health / enemy.max_health
                 })
@@ -349,18 +349,20 @@ class Monster:
 
         # 碰撞检测
         for m in self.battlefield.query_monster(self.position, RADIUS * 2):
-            if not m.can_be_target() or m == self or m.faction != self.faction:
+            if not m.can_be_target() or m == self or m.faction != self.faction or (m.blocked and self.blocked):
                 continue
             dir = m.position - self.position
             dist = np.maximum(dir.magnitude, 0.0001)
             dir /= dist
 
-            radius2 = RADIUS * 0.2 if m.blocked else RADIUS
+            radius2 = RADIUS * 0.5 if m.blocked else RADIUS
+            hardness1 = 0.8 if m.blocked else 0.1
+            hardness2 = 0.8 if self.blocked else 0.1
             depth = RADIUS + radius2 - dist
             if dist < RADIUS + radius2:
                 # 发生碰撞，挤出
-                self.position -= dir * (depth + 0.01) * 0.5
-                m.position += dir * (depth + 0.01) * 0.5
+                self.position -= dir * (depth + 0.01) * hardness1 / (hardness1 + hardness2) * 0.5
+                m.position += dir * (depth + 0.01) * hardness2 / (hardness1 + hardness2)* 0.5
             
         # 限制在场景范围内
         if self.position.x < 0:
@@ -406,7 +408,7 @@ class Monster:
         self.battlefield.hash_grid.insert(self.position, self.id)
         
         if self.frame_counter % 3 == 0:
-            targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
+            targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=1)
             if len(targets) > 0:
                 self.target = targets[0]
         # if target_ and np.linalg.norm(self.target.position - self.position) > self.attack_range and np.linalg.norm(target_.position - self.position) <= self.attack_range:
