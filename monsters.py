@@ -341,7 +341,6 @@ class Monster:
             if direction.magnitude <= self.attack_range:
                 # 已经在攻击范围内，停止移动
                 self.blocked = True
-                self.velocity = self.velocity * 0.5
         else:
             return
         
@@ -362,8 +361,8 @@ class Monster:
             dir /= dist
 
             radius2 = RADIUS * 0.1 if m.blocked else RADIUS
-            hardness1 = 10
-            hardness2 = 10
+            hardness1 = 10 if m.blocked else 0.1
+            hardness2 = 10 if self.blocked else 0.1
             depth = RADIUS + radius2 - dist
             if dist < RADIUS + radius2:
                 # 发生碰撞，挤出
@@ -371,6 +370,8 @@ class Monster:
                 m.velocity += dir * (depth + 0.05) * hardness2 / (hardness1 + hardness2)
     
     def do_move(self, delta_time):
+        if self.blocked:
+            self.velocity = FastVector(0, 0)
         if self.velocity.magnitude > self.move_speed:
             self.velocity.normalize()
             self.velocity *= self.move_speed
@@ -458,7 +459,6 @@ class Monster:
         self.on_attack(target, damage)
         if self.apply_damage_to_target(target, damage):
             target.on_hit(self, damage)
-        self.attack_time_counter = 0
 
     def apply_damage_to_target(self, target, damage) -> bool:
         debug_print(f"{self.name}{self.id} 对 {target.name}{target.id} 造成{damage}点{self.attack_type}伤害")
@@ -1226,25 +1226,25 @@ class 萨克斯(Monster):
             self.move_speed = 0
             self.charging_counter = 0
             debug_print(f"{self.name}{self.id} 开始蓄力")
+
+        # 蓄力5秒后造成攻击力150%物理伤害
+        if self.stage == 1 and self.charging_counter >= 5:
+            self.stage = 0
+            self.move_speed = self.original_move_speed
+            self.skill_counter = 0
+            self.charging_counter = 0
+
+            for m in self.get_hit_enemies():
+                dmg = self.calculate_damage(m, self.get_attack_power() * 1.5)
+                if self.apply_damage_to_target(m, dmg):
+                    m.on_hit(self, dmg)
+                    debug_print(f"{m.name} 受到{dmg}点萨克斯伤害")
+
         super().increase_skill_cd(delta_time)
     
     def attack(self, target, gameTime):
         if self.stage == 1:
-            # 蓄力5秒后造成攻击力150%物理伤害
-            if self.charging_counter >= 5:
-                self.stage = 0
-                self.move_speed = self.original_move_speed
-                self.skill_counter = 0
-                self.charging_counter = 0
-
-                for m in self.get_hit_enemies():
-                    dmg = self.calculate_damage(m, self.get_attack_power() * 1.5)
-                    if self.apply_damage_to_target(m, dmg):
-                        target.on_hit(self, dmg)
-                        debug_print(f"{m.name} 受到{dmg}点萨克斯伤害")
-
-                self.attack_time_counter = 0
-            return
+            self.attack_time_counter = 0
         else:
             super().attack(target, gameTime)
 
@@ -1398,21 +1398,17 @@ class 萨卡兹链术师(Monster):
         return candidates
     
     def attack(self, target, gameTime):
-        direction = target.position - self.position
-        distance = direction.magnitude
-            
-        if distance <= self.attack_range:
-            taragets = self.chain_attack(target)
-            for node in taragets:
-                base_dmg = self.get_attack_power() * node.damage_multiplier
-                dmg = self.calculate_damage(node.target, base_dmg)
-                if self.apply_damage_to_target(node.target, dmg):
-                    node.target.on_hit(self, dmg)
-                    # 所有人都有一样的凋亡损伤
-                    t = ElementType.NECRO_RIGHT
-                    node.target.element_system.accumulate(t, self.get_attack_power() * 0.3)
-                    # debug_print(f"{self.name}{self.id} 对 {node.target.name}{node.target.id} 造成{dmg}点魔法伤害")
-            self.attack_time_counter = 0
+        taragets = self.chain_attack(target)
+        for node in taragets:
+            base_dmg = self.get_attack_power() * node.damage_multiplier
+            dmg = self.calculate_damage(node.target, base_dmg)
+            if self.apply_damage_to_target(node.target, dmg):
+                node.target.on_hit(self, dmg)
+                # 所有人都有一样的凋亡损伤
+                t = ElementType.NECRO_RIGHT
+                node.target.element_system.accumulate(t, self.get_attack_power() * 0.3)
+                # debug_print(f"{self.name}{self.id} 对 {node.target.name}{node.target.id} 造成{dmg}点魔法伤害")
+        self.attack_time_counter = 0
 
     def on_death(self):
         debug_print(f"{self.name} 变成大君之赐")
@@ -1434,12 +1430,8 @@ class 狂躁珊瑚(Monster):
         self.attack_stack = 0
         self.decay_timer = 0
 
-    def can_attack(self, delta_time):
-        ret = super().can_attack(delta_time)
-        direction = self.target.position - self.position
-        distance = direction.magnitude
-
-        if distance <= self.attack_range:
+    def on_extra_update(self, delta_time):
+        if not self.target or not self.target.can_be_target() or (self.target.position - self.position).magnitude > self.attack_range:
             self.decay_timer += delta_time
             if self.decay_timer > 3.5 and abs(round(self.decay_timer - 3.5) - (self.decay_timer - 3.5)) < 0.001:
                 if self.attack_stack > 0:
@@ -1448,8 +1440,8 @@ class 狂躁珊瑚(Monster):
                 else:
                     self.attack_stack = 0
                     self.attack_multiplier = 1
-        return ret
-
+        else:
+            self.decay_timer = 0
 
     def attack(self, target, delta_time):
         direction = target.position - self.position
@@ -1470,11 +1462,12 @@ class 狂躁珊瑚(Monster):
             if self.attack_stack < 15:
                 self.attack_stack += 1
                 self.attack_multiplier += 0.15
-            
             if self.attack_stack == 10:
                 debug_print(f"{self.name} 被动叠了10层")
             if self.attack_stack == 15:
                 debug_print(f"{self.name} 被动叠了15层")
+            
+
 
 class 雪境精锐(Monster):
     """雪境精锐"""
