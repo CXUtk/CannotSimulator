@@ -54,7 +54,7 @@ def main():
     #     scene_config = json.load(f)
 
     # 使用示例，直接修改这里的csv文件就可以跑模拟
-    battle_data = process_battle_data("arknight/65knwd.csv")
+    battle_data = process_battle_data("arknight/56fin2_66k.csv")
 
     
     win = 0

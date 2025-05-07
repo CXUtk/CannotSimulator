@@ -159,7 +159,8 @@ class Battlefield:
         # 更新所有单位
         for m in self.monsters:
             m.update(VIRTUAL_TIME_DELTA)
-        
+        for m in self.monsters:
+            m.do_move(VIRTUAL_TIME_DELTA)
         # 检查胜利条件
         self.alive_monsters = [m for m in self.monsters if m.is_alive]
         winner = self.check_victory()

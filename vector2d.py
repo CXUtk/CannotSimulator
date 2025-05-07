@@ -93,6 +93,13 @@ class FastVector:
         """缓存友好表示"""
         return (self.x, self.y)
 
+    def normalize(self) -> 'FastVector':
+        d = self.magnitude
+        if d != 0:
+            self.x /= d
+            self.y /= d
+        return self
+
 # # 性能对比测试
 # if __name__ == '__main__':
 #     from timeit import timeit

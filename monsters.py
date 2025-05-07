@@ -52,7 +52,7 @@ class TargetSelector:
             if not need_in_range or (need_in_range and in_range):
                 enemy_info.append({
                     "enemy": enemy,
-                    "distance": -enemy.id if in_range else dist,
+                    "distance": dist,
                     "aggro": enemy.aggro if in_range else 0 
                 })
         
@@ -91,7 +91,7 @@ class TargetSelector:
             if not need_in_range or (need_in_range and in_range):
                 enemy_info.append({
                     "enemy": enemy,
-                    "distance": -enemy.id if in_range else dist,
+                    "distance": dist,
                     "aggro": enemy.aggro if in_range else 0,
                     "health_ratio": enemy.health / enemy.max_health
                 })
@@ -211,7 +211,7 @@ class StatusSystem:
             debug_print(f"{self.owner.name}{self.owner.id} 进入了毒圈！")
         elif effect.type == BuffType.WINE:
             self.owner.attack_speed += 100
-            self.owner.phys_dodge += 50
+            self.owner.phys_dodge += 80
             debug_print(f"{self.owner.name}{self.owner.id} 进入了酒桶区域！")
         elif effect.type == BuffType.INVINCIBLE2:
             self.owner.invincible = True
@@ -238,7 +238,7 @@ class StatusSystem:
             debug_print(f"{self.owner.name}{self.owner.id} 离开了毒圈！")
         elif effect.type == BuffType.WINE:
             self.owner.attack_speed -= 100
-            self.owner.phys_dodge -= 50
+            self.owner.phys_dodge -= 80
         elif effect.type == BuffType.INVINCIBLE2:
             self.owner.invincible = False
             self.owner.can_target = True
@@ -268,6 +268,7 @@ class Monster:
         
         # 战斗状态
         self.position : FastVector = position
+        self.velocity : FastVector = FastVector(0, 0)
         self.target = None
         self.attack_time_counter = 0
         self.is_alive = True
@@ -283,6 +284,7 @@ class Monster:
         self.immunity:set[BuffType] = set()
         self.can_target = True
         self.frame_counter = 0
+        self.dmg_applied = False
 
     # 如果活着且不处于不可选取状态
     def can_be_target(self):
@@ -324,6 +326,9 @@ class Monster:
 
     def increase_skill_cd(self, delta_time):
         """增加技能技力"""
+    
+    def increase_attack_cd(self, delta_time):
+        """增加攻击技力、攻击频率计算"""
         self.attack_time_counter += delta_time * (np.maximum(10, np.minimum(self.attack_speed, 600)) / 100)
     
     def move_toward_enemy(self, delta_time):
@@ -336,33 +341,41 @@ class Monster:
             if direction.magnitude <= self.attack_range:
                 # 已经在攻击范围内，停止移动
                 self.blocked = True
-                return
+                self.velocity = self.velocity * 0.5
         else:
             return
         
 
         # 标准化移动向量并应用速度
         norm_direction = direction / direction.magnitude
-        self.position += norm_direction * self.move_speed * delta_time
+        if not self.blocked:
+            self.velocity = (self.velocity * 13 + norm_direction * self.move_speed) / 14
 
         RADIUS = self.battlefield.HIT_BOX_RADIUS
 
         # 碰撞检测
         for m in self.battlefield.query_monster(self.position, RADIUS * 2):
-            if not m.can_be_target() or m == self or m.faction != self.faction or (m.blocked and self.blocked):
+            if not m.can_be_target() or m == self or m.faction != self.faction:
                 continue
             dir = m.position - self.position
             dist = np.maximum(dir.magnitude, 0.0001)
             dir /= dist
 
-            radius2 = RADIUS * 0.5 if m.blocked else RADIUS
-            hardness1 = 0.8 if m.blocked else 0.1
-            hardness2 = 0.8 if self.blocked else 0.1
+            radius2 = RADIUS * 0.1 if m.blocked else RADIUS
+            hardness1 = 10
+            hardness2 = 10
             depth = RADIUS + radius2 - dist
             if dist < RADIUS + radius2:
                 # 发生碰撞，挤出
-                self.position -= dir * (depth + 0.01) * hardness1 / (hardness1 + hardness2) * 0.5
-                m.position += dir * (depth + 0.01) * hardness2 / (hardness1 + hardness2)* 0.5
+                self.velocity -= dir * (depth + 0.05) * hardness1 / (hardness1 + hardness2) 
+                m.velocity += dir * (depth + 0.05) * hardness2 / (hardness1 + hardness2)
+    
+    def do_move(self, delta_time):
+        if self.velocity.magnitude > self.move_speed:
+            self.velocity.normalize()
+            self.velocity *= self.move_speed
+
+        self.position += self.velocity * delta_time
             
         # 限制在场景范围内
         if self.position.x < 0:
@@ -375,7 +388,19 @@ class Monster:
             self.position.y = self.battlefield.map_size[1]
 
     def can_attack(self, delta_time):
-        return self.attack_time_counter >= self.attack_interval
+        direction = self.target.position - self.position
+        distance = direction.magnitude
+        in_range = distance <= self.attack_range
+        if in_range:
+            self.increase_attack_cd(delta_time)
+        else:
+            self.attack_time_counter = 0
+            return False
+        
+        can_damage = self.attack_time_counter >= self.attack_interval
+        if self.attack_time_counter >= self.attack_interval:
+            self.attack_time_counter = 0
+        return can_damage
     
     def update_elemental(self, delta_time):
         if self.element_system.active_burst:
@@ -408,14 +433,13 @@ class Monster:
         self.battlefield.hash_grid.insert(self.position, self.id)
         
         if self.frame_counter % 3 == 0:
-            targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=1)
-            if len(targets) > 0:
-                self.target = targets[0]
+            self.target = self.find_target()
         # if target_ and np.linalg.norm(self.target.position - self.position) > self.attack_range and np.linalg.norm(target_.position - self.position) <= self.attack_range:
         #     self.target = target_
         if self.target and self.target.is_alive:
             if self.can_attack(delta_time):
                 self.attack(self.target, delta_time)
+                self.dmg_applied = True
     
 
     def find_target(self):
@@ -430,15 +454,11 @@ class Monster:
 
     # 攻击相关方法
     def attack(self, target, gameTime):
-        direction = target.position - self.position
-        distance = direction.magnitude
-
-        if distance <= self.attack_range:
-            damage = self.calculate_damage(target, self.get_attack_power())
-            self.on_attack(target, damage)
-            if self.apply_damage_to_target(target, damage):
-                target.on_hit(self, damage)
-            self.attack_time_counter = 0
+        damage = self.calculate_damage(target, self.get_attack_power())
+        self.on_attack(target, damage)
+        if self.apply_damage_to_target(target, damage):
+            target.on_hit(self, damage)
+        self.attack_time_counter = 0
 
     def apply_damage_to_target(self, target, damage) -> bool:
         debug_print(f"{self.name}{self.id} 对 {target.name}{target.id} 造成{damage}点{self.attack_type}伤害")
