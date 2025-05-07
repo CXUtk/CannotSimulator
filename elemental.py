@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from .utils import ElementType, debug_print, lerp
+from .utils import DamageType, ElementType, debug_print, lerp
 
 
 class ElementAccumulator:
@@ -52,7 +52,7 @@ class ElementBurst:
             self.duration = 10
             dmg = 7000
             debug_print(f"{self.owner.name}{self.owner.id} 灼燃发期间受到{dmg}点伤害")
-            self.owner.take_damage(dmg, "真实")
+            self.owner.take_damage(dmg, DamageType.TRUE)
             self.owner.magic_resist -= 20
 
     @property
@@ -74,14 +74,14 @@ class ElementBurst:
             self.dot_timer += deltaTime
             if self.dot_timer >= 1.0:
                 debug_print(f"{self.owner.name}{self.owner.id} 凋亡损伤爆发期间受到{self.dot_damage}伤害")
-                self.owner.take_damage(self.dot_damage, "真实")
+                self.owner.take_damage(self.dot_damage, DamageType.TRUE)
                 self.dot_timer = 0
         elif self.trigger_element == ElementType.NECRO_LEFT:
             # 持续伤害应用
             self.dot_timer += deltaTime
             if self.dot_timer >= 1.0:
                 debug_print(f"{self.owner.name}{self.owner.id} 凋亡损伤爆发期间受到{self.dot_damage}伤害")
-                self.owner.take_damage(self.dot_damage, "真实")
+                self.owner.take_damage(self.dot_damage, DamageType.TRUE)
                 self.dot_timer = 0
 
 
