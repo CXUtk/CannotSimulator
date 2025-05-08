@@ -859,6 +859,7 @@ class 庞贝(Monster):
         self.rage_mode = False
         self.ring_attack_counter = 0
         self.boss = True
+        self.attack_animation = AttackAnimation(0.4, 0.1, 0.5, self)
 
     def get_skill_bar(self):
         """技力在ui显示的内容"""
@@ -936,7 +937,7 @@ class 雪球(Monster):
     """恐怖雪球投掷手"""
     def on_spawn(self):
         self.first_attack = True
-        self.attack_animation = AttackAnimation(0.3, 0.2, 0.5, self)
+        self.attack_animation = AttackAnimation(0.2, 0.1, 0.7, self)
 
     def on_extra_update(self, delta_time):
         if self.first_attack:
@@ -1751,16 +1752,18 @@ class 酒桶(Monster):
         # 状态1：近战形态
         self.stage = 0
         self.move_speed *= 3
+        self.attack_animation = AttackAnimation(0.2, 0.1, 0.7, self)
+
 
     def attack(self, target : Monster, gameTime):
         if self.stage == 1:
             super().attack(target, gameTime)
         else:
-            damage = self.calculate_damage(target, self.get_attack_power() * 2.8)
-            self.on_attack(target, damage)
-            if self.apply_damage_to_target(target, damage):
-                debug_print(f"{self.name}{self.id} 丢出酒桶")
-                target.on_hit(self, damage)
+            # damage = self.calculate_damage(target, self.get_attack_power() * 2.8)
+            # self.on_attack(target, damage)
+            # if self.apply_damage_to_target(target, damage):
+            #     debug_print(f"{self.name}{self.id} 丢出酒桶")
+            #     target.on_hit(self, damage)
             # 丢出酒桶以后
             self.move_speed /= 3
             self.stage = 1
