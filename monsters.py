@@ -370,14 +370,14 @@ class Monster:
             if direction.magnitude <= self.attack_range:
                 # 已经在攻击范围内，停止移动
                 self.blocked = True
-                self.velocity = FastVector(0, 0)
+                direction = FastVector(0, 0)
         else:
             direction = FastVector(0, 0)
         
 
         # 标准化移动向量并应用速度
         norm_direction = direction.normalize()
-        if not self.blocked:
+        if not self.blocked and self.attack_state == AttackState.等待:
             self.velocity = (self.velocity * 7 + norm_direction * self.move_speed) / 8
 
         RADIUS = self.battlefield.HIT_BOX_RADIUS
@@ -390,14 +390,14 @@ class Monster:
             dist = np.maximum(dir.magnitude, 0.0001)
             dir /= dist
 
-            radius2 = RADIUS * 0.2 if m.blocked else RADIUS
+            radius2 = RADIUS * 0.1 if m.blocked else RADIUS
             hardness1 = 10 if m.blocked else 2
             hardness2 = 10 if self.blocked else 2
             depth = selfRadius + radius2 - dist
             if dist < selfRadius + radius2:
                 # 发生碰撞，挤出
-                self.velocity -= dir * (depth + 0.05) * hardness1 / (hardness1 + hardness2) 
-                m.velocity += dir * (depth + 0.05) * hardness2 / (hardness1 + hardness2)
+                self.velocity -= dir * (depth + 0.05) * hardness1 / (hardness1 + hardness2) * 0.5
+                m.velocity += dir * (depth + 0.05) * hardness2 / (hardness1 + hardness2) * 0.5
     
     def do_move(self, delta_time):
         if self.frozen or self.dizzy or not self.is_alive:
@@ -405,8 +405,7 @@ class Monster:
             return
 
         if self.velocity.magnitude > self.move_speed:
-            self.velocity.normalize()
-            self.velocity *= self.move_speed
+            self.velocity = self.velocity.normalize() * self.move_speed
 
         self.position += self.velocity * delta_time
 
@@ -661,10 +660,27 @@ class 大喷蛛(Monster):
         
 class 鳄鱼(Monster):
     """鳄鱼"""
-    def on_attack(self, target, damage):
-        # 实现减防特性
-        target.phy_def = max(0, target.phy_def - 10)
-        debug_print(f"{self.name} 使 {target.name} 防御力降低10")
+    def on_spawn(self):
+        self.attack_animation = AttackAnimation(0.32, 0.2, 0.48, self)
+    def apply_damage_to_target(self, target, damage):
+        if super().apply_damage_to_target(target, damage):
+            target.phy_def = max(0, target.phy_def - 10)
+            debug_print(f"{self.name} 使 {target.name} 防御力降低10")
+            return True
+        return False
+class 雪境精锐(Monster):
+    """雪境精锐"""
+    def on_spawn(self):
+        self.attack_animation = AttackAnimation(0.1, 0.15, 0.75, self)
+
+    def apply_damage_to_target(self, target, damage):
+        if super().apply_damage_to_target(target, damage):
+            # 实现减防特性
+            target.phy_def = max(0, target.phy_def - 100)
+            debug_print(f"{self.name} 使 {target.name} 防御力降低100")
+            return True
+        return False
+
 
 class 宿主流浪者(Monster):
     """严父"""
@@ -1526,15 +1542,6 @@ class 狂躁珊瑚(Monster):
             
 
 
-class 雪境精锐(Monster):
-    """雪境精锐"""
-    def apply_damage_to_target(self, target, damage):
-        if super().apply_damage_to_target(target, damage):
-            # 实现减防特性
-            target.phy_def = max(0, target.phy_def - 100)
-            debug_print(f"{self.name} 使 {target.name} 防御力降低100")
-            return True
-        return False
 
 class 炮god(Monster):
     """炮神"""
