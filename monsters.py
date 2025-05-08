@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from .vector2d import FastVector
 
-from .projectiles import AOEType, AOE炸弹
+from .projectiles import AOEType, AOE炸弹, AOE炸弹锁定
 
 if TYPE_CHECKING:
     from battle_field import Battlefield
@@ -152,7 +152,7 @@ class StatusSystem:
         if existing:
             # 寒冷效果叠加就会变成冰冻
             if effect.type == BuffType.CHILL:
-                self.remove(existing)
+                existing.duration = 0
                 self.apply(BuffEffect(BuffType.FROZEN, effect.duration, effect.source, effect.stacks, effect.data))
                 debug_print(f"{self.owner.name}{self.owner.id} 被 {effect.source.name} 冰冻了！")
                 return
@@ -311,9 +311,9 @@ class Monster:
         self.attack_time_counter = self.attack_interval
         self.attack_state = AttackState.等待
         if self.attack_range <= 0.8:
-            self.attack_animation = AttackAnimation(0.7, 0.1, 0.2, self)
+            self.attack_animation = AttackAnimation(0.35, 0.25, 0.4, self)
         else:
-            self.attack_animation = AttackAnimation(0.3, 0.2, 0.5, self)
+            self.attack_animation = AttackAnimation(0.2, 0.1, 0.7, self)
 
     # 如果活着且不处于不可选取状态
     def can_be_target(self):
@@ -370,6 +370,7 @@ class Monster:
             if direction.magnitude <= self.attack_range:
                 # 已经在攻击范围内，停止移动
                 self.blocked = True
+                self.velocity = FastVector(0, 0)
         else:
             direction = FastVector(0, 0)
         
@@ -377,7 +378,7 @@ class Monster:
         # 标准化移动向量并应用速度
         norm_direction = direction.normalize()
         if not self.blocked:
-            self.velocity = (self.velocity * 11 + norm_direction * self.move_speed) / 12
+            self.velocity = (self.velocity * 7 + norm_direction * self.move_speed) / 8
 
         RADIUS = self.battlefield.HIT_BOX_RADIUS
         selfRadius = RADIUS * 0.2 if self.blocked else RADIUS
@@ -410,7 +411,7 @@ class Monster:
         self.position += self.velocity * delta_time
 
         if self.blocked or self.attack_state != AttackState.等待:
-            self.velocity *= 0.3
+            self.velocity *= 0.5
             
         # 限制在场景范围内
         if self.position.x < 0:
@@ -482,7 +483,6 @@ class Monster:
         self.increase_skill_cd(delta_time)
         # 继续移动
         self.move_toward_enemy(delta_time)
-        self.battlefield.hash_grid.insert(self.position, self.id)
         
         if self.frame_counter % 3 == 0:
             self.target = self.find_target()
@@ -547,6 +547,9 @@ class Monster:
 
 class AcidSlug(Monster):
     """酸液源石虫"""
+    def on_spawn(self):
+        self.attack_animation = AttackAnimation(0.05, 0.1, 0.85, self)
+
     def on_attack(self, target, damage):
         # 实现减防特性
         target.phy_def = max(0, target.phy_def - 15)
@@ -712,6 +715,9 @@ class 爱蟹者(Monster):
 class 绵羊(Monster):
     def on_spawn(self):
         self.attack_animation = AttackAnimation(0.05, 0.1, 0.85, self)
+class 光剑(Monster):
+    def on_spawn(self):
+        self.attack_animation = AttackAnimation(0.2, 0.2, 0.6, self)
 
 class 海螺(Monster):
     """固海凿石者"""
@@ -775,7 +781,7 @@ class 拳击囚犯(Monster):
 class 高塔术师(Monster):
     """我们塔神"""
     def on_spawn(self):
-        self.attack_animation = AttackAnimation(0.05, 0.1, 0.85, self)
+        self.attack_animation = AttackAnimation(0.07, 0.13, 0.8, self)
 
     def attack(self, target, gameTime):
         targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=2)
@@ -783,11 +789,10 @@ class 高塔术师(Monster):
             return
         
         for t in targets:
-            for m in self.get_aoe_targets(t):
-                damage = self.calculate_damage(m, self.get_attack_power())
-                if self.apply_damage_to_target(m, damage):
-                    m.on_hit(self, damage)
-                    debug_print(f"{self.name}{self.id} 对 {m.name}{m.id} 造成{damage}点{self.attack_type}伤害")
+            self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹锁定(0.1, self.get_attack_power(), DamageType.MAGIC, self, t, name="爆裂魔法", aoeType=AOEType.Grid8))
+
+        debug_print(f"{self.name}{self.id} 射出爆裂魔法")
+                    
 
     def get_aoe_targets(self, target):
         aoe_targets = [m for m in self.battlefield.monsters 
@@ -801,6 +806,7 @@ class 冰原术师(Monster):
     def on_spawn(self):
         self.attack_count = 0
         self.targets = []
+        self.attack_animation = AttackAnimation(0.1, 0.1, 0.8, self)
 
     def on_attack(self, target, damage):
         self.attack_count += 1
@@ -1052,7 +1058,6 @@ class 杰斯顿(Monster):
 
             self.is_alive = True
             self.health = self.max_health
-            self.element_system = ElementAccumulator(self)
             self.status_system.reset()
             switch_stage = BuffEffect(
                 type=BuffType.INVINCIBLE2,
@@ -1353,7 +1358,7 @@ class 大君之赐(Monster):
 class 萨卡兹链术师(Monster):
     """萨卡兹链术师"""
     def on_spawn(self):
-        self.attack_animation = AttackAnimation(0.6, 0.2, 0.2, self)
+        self.attack_animation = AttackAnimation(0.4, 0.2, 0.4, self)
 
     class AttackNode:
         """攻击节点数据类"""
@@ -1384,7 +1389,7 @@ class 萨卡兹链术师(Monster):
             # 寻找下一个候选目标
             candidates = self._find_candidates(
                 current_target.position,
-                [m for m in self.battlefield.monsters if m.can_be_target() and m.faction != self.faction],
+                [m for m in self.battlefield.alive_monsters if m.can_be_target() and m.faction != self.faction],
                 visited
             )
             
@@ -1447,17 +1452,33 @@ class 萨卡兹链术师(Monster):
 
     def on_death(self):
         debug_print(f"{self.name} 变成大君之赐")
-        self.battlefield.append_monster_name("大君之赐", self.faction, self.position + FastVector(
-                        random.uniform(-1, 1) * 0.001,
-                        random.uniform(-1, 1) * 0.001
+        m = self.battlefield.append_monster_name("大君之赐", self.faction, self.position + FastVector(
+                        random.uniform(-1, 1) * 0.2,
+                        random.uniform(-1, 1) * 0.2
                     ))
+        switch_stage = BuffEffect(
+                type=BuffType.INVINCIBLE2,
+                duration=1,
+                source=self
+            )
+        dizzy = BuffEffect(
+                type=BuffType.DIZZY,
+                duration=1,
+                source=self
+            )
+            # 转阶段
+        m.status_system.apply(switch_stage)
+        m.status_system.apply(dizzy)
 
 class 高普尼克(Monster):
     """高普尼克"""
-    def on_extra_update(self, delta_time):
+    def on_spawn(self):
+        self.attack_stack = 0
+        self.decay_timer = 0
+        self.attack_animation = AttackAnimation(0.55, 0.4, 0.05, self)
+
         self.immunity.add(BuffType.DIZZY)
         self.immunity.add(BuffType.FROZEN)
-        return super().on_extra_update(delta_time)
     
 class 狂躁珊瑚(Monster):
     """狂躁珊瑚"""
@@ -1517,12 +1538,14 @@ class 雪境精锐(Monster):
 
 class 炮god(Monster):
     """炮神"""
+    def on_spawn(self):
+        self.attack_animation = AttackAnimation(0.05, 0.15, 0.8, self)
     def attack(self, target, gameTime):
         targets : list[Monster] = TargetSelector.select_targets(self, self.battlefield, need_in_range=True, max_targets=1)
         if len(targets) == 0:
             return
         
-        self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹(0.2, self.get_attack_power(), self.attack_type, self, targets[0].position, name="火箭弹", aoeType=AOEType.Grid8))
+        self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹锁定(0.2, self.get_attack_power(), self.attack_type, self, targets[0], name="火箭弹", aoeType=AOEType.Grid8))
 
         debug_print(f"{self.name}{self.id} 开炮")
 
@@ -1543,7 +1566,7 @@ class 榴弹佣兵(Monster):
                 direction = self.target.position - self.position
                 distance = direction.magnitude
                 if distance <= self.attack_range:
-                    self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹(0.2, self.get_attack_power() * 2, self.attack_type, self, self.target.position, name="火箭弹", aoeType=AOEType.Grid8))
+                    self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹锁定(0.2, self.get_attack_power() * 2, self.attack_type, self, self.target, name="火箭弹", aoeType=AOEType.Grid8))
                     self.stage = 1
                     debug_print(f"{self.name}{self.id} 射出火箭弹")
 
@@ -1570,6 +1593,7 @@ class 凋零萨卡兹(Monster):
         self.charging_counter2 = 0
         self.original_move_speed = self.move_speed
         self.locked_target = None
+        self.attack_animation = AttackAnimation(0.1, 0.1, 0.8, self)
     
     def increase_skill_cd(self, delta_time):
         if self.stage == 0:
@@ -1675,7 +1699,7 @@ class 衣架(Monster):
     def on_spawn(self):
         self.attack_speed -= 50
         self.attack_count = 0
-        self.attack_animation = AttackAnimation(0.25, 0.15, 0.6, self)
+        self.attack_animation = AttackAnimation(0.2, 0.1, 0.7, self)
 
     def get_skill_bar(self):
         """技力在ui显示的内容"""
@@ -2017,6 +2041,7 @@ class MonsterFactory:
         "食腐狗": 食腐狗,
         "鼠鼠": 鼠鼠,
         "雪球": 雪球,
+        "光剑": 光剑,
         "船长": 船长,
         "杰斯顿": 杰斯顿,
         "镜神": 镜神,

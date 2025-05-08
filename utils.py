@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from .battle_field import Battlefield
     from .monsters import Monster
 
-VISUALIZATION_MODE = False
+VISUALIZATION_MODE = True
 
 def debug_print(msg):
     if VISUALIZATION_MODE:

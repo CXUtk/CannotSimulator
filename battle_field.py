@@ -69,7 +69,7 @@ class Battlefield:
         self.monsters.append(monster)
         self.hash_grid.insert(monster.position, monster.id)
     
-    def append_monster_name(self, name, faction, pos):
+    def append_monster_name(self, name, faction, pos) -> 'Monster':
         """添加一个怪物到战场，只需要名字"""
         data = next((m for m in self.monster_data if m["名字"] == name), None)
         id = self.globalId
@@ -78,6 +78,7 @@ class Battlefield:
         self.globalId += 1
         self.monsters.append(monster)
         self.hash_grid.insert(monster.position, monster.id)
+        return monster
 
     def get_monster_with_id(self, id) -> 'Monster':
         return self.monsters[id]
@@ -146,13 +147,14 @@ class Battlefield:
     def run_one_frame(self):
         self.round += 1
 
-        if self.current_spawn_left < len(self.monster_temporal_area_left) and self.round % 2 == 0:
-            self.append_monster(self.monster_temporal_area_left[self.current_spawn_left])
-            self.current_spawn_left += 1
+        if self.round < 40 or self.round > 90:
+            if self.current_spawn_left < len(self.monster_temporal_area_left) and self.round % 2 == 0:
+                self.append_monster(self.monster_temporal_area_left[self.current_spawn_left])
+                self.current_spawn_left += 1
 
-        if self.current_spawn_right < len(self.monster_temporal_area_right) and self.round % 2 == 0:
-            self.append_monster(self.monster_temporal_area_right[self.current_spawn_right])
-            self.current_spawn_right += 1
+            if self.current_spawn_right < len(self.monster_temporal_area_right) and self.round % 2 == 0:
+                self.append_monster(self.monster_temporal_area_right[self.current_spawn_right])
+                self.current_spawn_right += 1
 
         self.check_zone()
         self.projectiles_manager.update_all(VIRTUAL_TIME_DELTA)
@@ -161,6 +163,8 @@ class Battlefield:
             m.update(VIRTUAL_TIME_DELTA)
         for m in self.monsters:
             m.do_move(VIRTUAL_TIME_DELTA)
+            if m.is_alive:
+                self.hash_grid.insert(m.position, m.id)
         # 检查胜利条件
         self.alive_monsters = [m for m in self.monsters if m.is_alive]
         winner = self.check_victory()

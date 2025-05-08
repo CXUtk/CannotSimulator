@@ -119,3 +119,41 @@ class AOE炸弹(TimedProjectile):
             aoe_targets = [m for m in battle_field.query_monster(target_pos, self.radius - battle_field.HIT_BOX_RADIUS) 
                     if m.is_alive and m.faction != self.source.faction]
         return aoe_targets
+    
+
+class AOE炸弹锁定(HomingProjectile):
+    def __init__(self, max_lifetime, damage : float, damageType : DamageType, source : "Monster", target : 'Monster', name : str, aoeType : AOEType, radius=1):
+        super().__init__(max_lifetime, damage, damageType, source, target)
+        self.name = name
+        self.aoe_Type = aoeType
+        self.radius = radius
+
+    def apply_damage_to_target(self, m : 'Monster', damage):
+        debug_print(f"{self.source.name}{self.source.id} 的{self.name}对 {m.name}{m.id} 造成{damage}点{self.damage_type}伤害")
+        if m.take_damage(damage, self.damage_type):
+            return True
+        debug_print(f"{self.source.name}{self.source.id} 的{self.name}没有对 {m.name}{m.id}造成伤害")
+        return False
+
+    def on_timeout(self, battle_field:'Battlefield'):
+        if not self.target.can_be_target():
+            return
+        aoe_targets = self.get_aoe_targets(self.target.position, battle_field)
+        for m in aoe_targets:
+            damage = calculate_normal_dmg(m.phy_def, m.magic_resist, self.damage, self.damage_type)
+            if self.apply_damage_to_target(m, damage):
+                m.on_hit(self.source, damage)
+        
+    def get_aoe_targets(self, target_pos, battle_field: 'Battlefield'):
+        if self.aoe_Type == AOEType.Grid8:
+            aoe_targets = [m for m in battle_field.alive_monsters
+                    if m.is_alive and m.faction != self.source.faction
+                    and np.maximum(abs(m.position.x - target_pos.x), abs(m.position.y - target_pos.y)) <= 1]
+        elif self.aoe_Type == AOEType.Grid4:
+            aoe_targets = [m for m in battle_field.alive_monsters
+                    if m.is_alive and m.faction != self.source.faction
+                    and abs(m.position.x - target_pos.x) + abs(m.position.y - target_pos.y) <= 1]
+        elif self.aoe_Type == AOEType.Circle:
+            aoe_targets = [m for m in battle_field.query_monster(target_pos, self.radius - battle_field.HIT_BOX_RADIUS) 
+                    if m.is_alive and m.faction != self.source.faction]
+        return aoe_targets
