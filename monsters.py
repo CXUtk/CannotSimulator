@@ -391,8 +391,8 @@ class Monster:
             dir /= dist
 
             radius2 = RADIUS * 0.1 if m.blocked else RADIUS
-            hardness1 = 10 if m.blocked else 2
-            hardness2 = 10 if self.blocked else 2
+            hardness1 = 10 if m.blocked else 1
+            hardness2 = 10 if self.blocked else 1
             depth = selfRadius + radius2 - dist
             if dist < selfRadius + radius2:
                 # 发生碰撞，挤出
@@ -473,7 +473,7 @@ class Monster:
         self.status_system.update(delta_time)
         self.update_elemental(delta_time)
 
-        if self.target is None or not self.target.can_be_target():
+        if self.target is None or not self.target.can_be_target() or (self.target.position - self.position).magnitude > self.attack_range:
             # 寻找新目标
             self.target = self.find_target()
 
@@ -484,8 +484,9 @@ class Monster:
         # 继续移动
         self.move_toward_enemy(delta_time)
         
-        if self.frame_counter % 3 == 0:
-            self.target = self.find_target()
+        if self.attack_range <= 0.8:
+            if self.frame_counter % 3 == 0:
+                self.target = self.find_target()
         # if target_ and np.linalg.norm(self.target.position - self.position) > self.attack_range and np.linalg.norm(target_.position - self.position) <= self.attack_range:
         #     self.target = target_
 
@@ -655,8 +656,8 @@ class 大喷蛛(Monster):
     def spawn_small(self):
         debug_print(f"{self.name} 释放小喷蛛")
         self.battlefield.append_monster_name("小喷蛛", self.faction, self.position + FastVector(
-                        random.uniform(0, 1) * 0.001,
-                        random.uniform(0, 1) * 0.001
+                        random.uniform(0, 1) * 0.2,
+                        random.uniform(0, 1) * 0.2
                     ))
         
 class 鳄鱼(Monster):
@@ -1739,11 +1740,12 @@ class 标枪恐鱼(Monster):
         targets = TargetSelector.select_targets_lowest_health(self, self.battlefield, need_in_range=True, max_targets=1)
         if len(targets) == 0:
             return
+        self.target = targets[0]
 
-        damage = self.calculate_damage(targets[0], self.get_attack_power())
-        self.on_attack(targets[0], damage)
-        if self.apply_damage_to_target(targets[0], damage):
-            targets[0].on_hit(self, damage)
+        damage = self.calculate_damage(self.target, self.get_attack_power())
+        self.on_attack(self.target, damage)
+        if self.apply_damage_to_target(self.target, damage):
+            self.target.on_hit(self, damage)
 
 class 护盾哥(Monster):
     """灰尾香主"""
