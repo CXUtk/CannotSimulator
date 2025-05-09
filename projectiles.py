@@ -136,8 +136,8 @@ class AOE炸弹锁定(HomingProjectile):
         return False
 
     def on_timeout(self, battle_field:'Battlefield'):
-        if not self.target.can_be_target():
-            return
+        # if not self.target.can_be_target():
+        #     return
         aoe_targets = self.get_aoe_targets(self.target.position, battle_field)
         for m in aoe_targets:
             damage = calculate_normal_dmg(m.phy_def, m.magic_resist, self.damage, self.damage_type)
