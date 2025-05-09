@@ -396,8 +396,8 @@ class Monster:
             depth = selfRadius + radius2 - dist
             if dist < selfRadius + radius2:
                 # 发生碰撞，挤出
-                self.velocity -= dir * (depth + 0.05) * hardness1 / (hardness1 + hardness2) * 0.5
-                m.velocity += dir * (depth + 0.05) * hardness2 / (hardness1 + hardness2) * 0.5
+                self.velocity -= dir * (depth + 0.05) * hardness1 / (hardness1 + hardness2)
+                m.velocity += dir * (depth + 0.05) * hardness2 / (hardness1 + hardness2)
     
     def do_move(self, delta_time):
         if self.frozen or self.dizzy or not self.is_alive:
@@ -407,7 +407,8 @@ class Monster:
         if self.velocity.magnitude > self.move_speed:
             self.velocity = self.velocity.normalize() * self.move_speed
 
-        self.position += self.velocity * delta_time * 0.64
+        # 更新位置，为了和yj代码对齐乘以一个减速系数
+        self.position += self.velocity * delta_time * 0.5
 
         if self.blocked or self.attack_state != AttackState.等待:
             self.velocity *= 0.5
@@ -593,7 +594,7 @@ class 冰爆虫(Monster):
         # 实现自爆逻辑
         explosion_radius = 1.65
         debug_print(f"{self.name} 即将自爆！")
-        for m in self.battlefield.monsters:
+        for m in self.battlefield.alive_monsters:
             if m != self and m.faction != self.faction and m.is_alive:
                 distance = (m.position - self.position).magnitude
                 if distance <= explosion_radius:
@@ -719,7 +720,7 @@ class 狂暴宿主组长(Monster):
 
     def on_extra_update(self, delta_time):
         if self.battlefield.gameTime - self.lastHurtTime >= 1.0:
-            self.health -= 500
+            self.health -= 350
             self.lastHurtTime = self.battlefield.gameTime
             if self.health <= 0:
                 self.is_alive = False
@@ -967,7 +968,7 @@ class 雪球(Monster):
             if len(targets) == 0:
                 return
                     
-            self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹(0.25, self.get_attack_power() * 1.5, DamageType.MAGIC, self, targets[0].position, name="雪球", aoeType=AOEType.Grid4))
+            self.battlefield.projectiles_manager.spawn_projectile(AOE炸弹锁定(0.25, self.get_attack_power() * 1.5, DamageType.MAGIC, self, targets[0], name="雪球", aoeType=AOEType.Grid4))
             self.attack_range = 0.8
             self.first_attack = False
             debug_print(f"{self.name}{self.id} 投掷雪球")
@@ -1731,8 +1732,6 @@ class 衣架(Monster):
 
 class 标枪恐鱼(Monster):
     def on_spawn(self):
-        self.attack_speed -= 50
-        self.attack_count = 0
         self.attack_animation = AttackAnimation(0.1, 0.2, 0.7, self)
         
     """标枪恐鱼穿刺者"""
