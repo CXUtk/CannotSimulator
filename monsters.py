@@ -407,7 +407,7 @@ class Monster:
         if self.velocity.magnitude > self.move_speed:
             self.velocity = self.velocity.normalize() * self.move_speed
 
-        self.position += self.velocity * delta_time
+        self.position += self.velocity * delta_time * 0.64
 
         if self.blocked or self.attack_state != AttackState.等待:
             self.velocity *= 0.5
