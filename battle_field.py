@@ -38,6 +38,7 @@ class Battlefield:
         self.globalId = 0
         self.effect_zones = []
         self.dead_count = {Faction.LEFT: 0, Faction.RIGHT: 0}
+        self.gameTime = 0
 
         self.effect_zones.append(PoisonZone(self))
         self.projectiles_manager = ProjectileManager(self)

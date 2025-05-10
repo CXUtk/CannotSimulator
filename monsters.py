@@ -637,6 +637,7 @@ class 大喷蛛(Monster):
     """大喷蛛"""
     def on_spawn(self):
         self.skill_counter = 0
+        self.attack_animation = AttackAnimation(0.4, 0.2, 0.4, self)
 
     def increase_skill_cd(self, delta_time):
         self.skill_counter += delta_time
@@ -656,8 +657,8 @@ class 大喷蛛(Monster):
     def spawn_small(self):
         debug_print(f"{self.name} 释放小喷蛛")
         self.battlefield.append_monster_name("小喷蛛", self.faction, self.position + FastVector(
-                        random.uniform(0, 1) * 0.2,
-                        random.uniform(0, 1) * 0.2
+                        random.uniform(-1, 1) * 0.2,
+                        random.uniform(-1, 1) * 0.2
                     ))
         
 class 鳄鱼(Monster):
@@ -687,14 +688,12 @@ class 雪境精锐(Monster):
 class 宿主流浪者(Monster):
     """严父"""
     def on_spawn(self):
-        self.lastLifeRegenTime = 0
         self.attack_animation = AttackAnimation(0.4, 0.2, 0.4, self)
     
     def on_extra_update(self, delta_time):
-        if  self.battlefield.gameTime - self.lastLifeRegenTime >= 1.0:
-            self.health += 250
-            self.health = np.minimum(self.health, self.max_health)
-            self.lastLifeRegenTime = self.battlefield.gameTime
+        self.health += 250 * delta_time
+        self.health = np.minimum(self.health, self.max_health)
+        self.lastLifeRegenTime = self.battlefield.gameTime
 
 
 class 保鲜膜射手(Monster):
@@ -704,6 +703,7 @@ class 保鲜膜射手(Monster):
         self.shieldMode = True
         self.phy_def += 3000
         self.magic_resist += 95
+        self.attack_animation = AttackAnimation(0.4, 0.2, 0.4, self)
     
     def on_extra_update(self, delta_time):
         self.shieldCounter -= delta_time
@@ -716,16 +716,13 @@ class 保鲜膜射手(Monster):
 class 狂暴宿主组长(Monster):
     """1750"""
     def on_spawn(self):
-        self.lastHurtTime = 0
         self.attack_animation = AttackAnimation(0.4, 0.4, 0.2, self)
 
     def on_extra_update(self, delta_time):
-        if self.battlefield.gameTime - self.lastHurtTime >= 1.0:
-            self.health -= 350
-            self.lastHurtTime = self.battlefield.gameTime
-            if self.health <= 0:
-                self.is_alive = False
-                self.on_death()
+        self.health -= 350 * delta_time
+        if self.health <= 0:
+            self.is_alive = False
+            self.on_death()
             
 class 爱蟹者(Monster):
     def on_spawn(self):
@@ -883,7 +880,7 @@ class 庞贝(Monster):
         self.rage_mode = False
         self.ring_attack_counter = 0
         self.boss = True
-        self.attack_animation = AttackAnimation(0.4, 0.1, 0.5, self)
+        self.attack_animation = AttackAnimation(0.1, 0.1, 0.8, self)
 
     def get_skill_bar(self):
         """技力在ui显示的内容"""
@@ -914,10 +911,9 @@ class 庞贝(Monster):
             self.rage_mode = True
             self.attack_speed += 40
             debug_print(f"{self.name} 进入狂暴模式")
-            
+        self.ring_attack_counter += delta_time
         targets = TargetSelector.select_targets(self, self.battlefield, need_in_range=False, max_targets=9999)
         if len(targets) > 0 and (targets[0].position - self.position).magnitude < 0.8:
-            self.ring_attack_counter += delta_time
             if self.ring_attack_counter >= 10.0:
                 targets = [t for t in targets if (t.position - self.position).magnitude < 1.4]
                 for tar in targets:
