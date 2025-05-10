@@ -72,16 +72,16 @@ class ElementBurst:
             
             # 持续伤害应用
             self.dot_timer += deltaTime
+            self.owner.take_damage(self.dot_damage * deltaTime, DamageType.TRUE)
             if self.dot_timer >= 1.0:
                 debug_print(f"{self.owner.name}{self.owner.id} 凋亡损伤爆发期间受到{self.dot_damage}伤害")
-                self.owner.take_damage(self.dot_damage, DamageType.TRUE)
                 self.dot_timer = 0
         elif self.trigger_element == ElementType.NECRO_LEFT:
             # 持续伤害应用
             self.dot_timer += deltaTime
+            self.owner.take_damage(self.dot_damage * deltaTime, DamageType.TRUE)
             if self.dot_timer >= 1.0:
                 debug_print(f"{self.owner.name}{self.owner.id} 凋亡损伤爆发期间受到{self.dot_damage}伤害")
-                self.owner.take_damage(self.dot_damage, DamageType.TRUE)
                 self.dot_timer = 0
 
 
