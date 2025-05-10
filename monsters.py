@@ -313,7 +313,7 @@ class Monster:
         if self.attack_range <= 0.8:
             self.attack_animation = AttackAnimation(0.35, 0.25, 0.4, self)
         else:
-            self.attack_animation = AttackAnimation(0.2, 0.1, 0.7, self)
+            self.attack_animation = AttackAnimation(0.2, 0.5, 0.3, self)
 
     # 如果活着且不处于不可选取状态
     def can_be_target(self):
@@ -549,7 +549,7 @@ class Monster:
 class AcidSlug(Monster):
     """酸液源石虫"""
     def on_spawn(self):
-        self.attack_animation = AttackAnimation(0.05, 0.1, 0.85, self)
+        self.attack_animation = AttackAnimation(0.05, 0.5, 0.45, self)
 
     def on_attack(self, target, damage):
         # 实现减防特性
@@ -740,7 +740,7 @@ class 海螺(Monster):
         self.stage = 0
         self.last_attack_time = -1
         self.original_speed = self.move_speed
-        self.attack_animation = AttackAnimation(0.2, 0.2, 0.6, self)
+        self.attack_animation = AttackAnimation(0.2, 0.5, 0.3, self)
 
     def attack(self, target, gameTime):
         super().attack(target, gameTime)
@@ -1096,7 +1096,7 @@ class 镜神(Monster):
     """山海众司魅人"""
     def on_spawn(self):
         # 技力
-        self.skill_counter = 27
+        self.skill_counter = 25
         self.stage = 0
         self.charging_counter = 0
         self.rage_counter = 0
@@ -1178,7 +1178,7 @@ class Vvan(Monster):
     """薇薇安娜"""
     def on_spawn(self):
         # 技力
-        self.skill_counter = 20
+        self.skill_counter = 15
         self.stage = 0
         self.charging_counter = 0
         self.original_move_speed = self.move_speed
@@ -1505,17 +1505,14 @@ class 狂躁珊瑚(Monster):
 
 
     def on_extra_update(self, delta_time):
-        if not self.target or not self.target.can_be_target() or (self.target.position - self.position).magnitude > self.attack_range:
-            self.decay_timer += delta_time
-            if self.decay_timer > 3.5 and abs(round(self.decay_timer - 3.5) - (self.decay_timer - 3.5)) < 0.001:
-                if self.attack_stack > 0:
-                    self.attack_stack -= 2
-                    self.attack_multiplier -= 0.3
-                else:
-                    self.attack_stack = 0
-                    self.attack_multiplier = 1
-        else:
-            self.decay_timer = 0
+        self.decay_timer += delta_time
+        if self.decay_timer > 3.5 and abs(round(self.decay_timer - 3.5) - (self.decay_timer - 3.5)) < 0.001:
+            if self.attack_stack > 0:
+                self.attack_stack -= 2
+                self.attack_multiplier -= 0.3
+            else:
+                self.attack_stack = 0
+                self.attack_multiplier = 1
 
     def attack(self, target, delta_time):
         direction = target.position - self.position
@@ -1731,7 +1728,7 @@ class 衣架(Monster):
 
 class 标枪恐鱼(Monster):
     def on_spawn(self):
-        self.attack_animation = AttackAnimation(0.15, 0.15, 0.7, self)
+        self.attack_animation = AttackAnimation(0.15, 0.3, 0.65, self)
         
     """标枪恐鱼穿刺者"""
     def attack(self, target, gameTime):
